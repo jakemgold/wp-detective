@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="../dist/popup.css">
+</head>
+<body>
+  <div id="root"></div>
+  <!-- Classic scripts — these modules are also loaded as content scripts, so
+       they expose their API on globalThis. The React bundle reads them from
+       window.WPRest / window.WPHost. -->
+  <script src="../lib/rest.js"></script>
+  <script src="../lib/host.js"></script>
+  <script src="../dist/popup.js"></script>
+</body>
+</html>

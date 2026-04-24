@@ -5,7 +5,8 @@
   "description": "Chrome extension that detects WordPress sites and surfaces admin/developer shortcuts.",
   "scripts": {
     "build": "cross-env NODE_ENV=production TENUP_NO_EXTERNALS=true 10up-toolkit build",
-    "start": "cross-env NODE_ENV=development TENUP_NO_EXTERNALS=true 10up-toolkit start"
+    "start": "cross-env NODE_ENV=development TENUP_NO_EXTERNALS=true 10up-toolkit start",
+    "build:safari": "npm run build && bash scripts/sync-safari.sh"
   },
   "dependencies": {
     "@wordpress/icons": "^12.2.0",

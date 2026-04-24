@@ -1,6 +1,6 @@
 # WP Detective — Browser Extension for WordPress
 
-A Chrome extension (Safari coming soon) that detects WordPress sites and puts admin shortcuts, hosting info, and developer tools in your toolbar.
+A browser extension that detects WordPress sites and puts admin shortcuts, hosting info, and developer tools in your toolbar. Chrome is the primary target; Safari is supported via a companion Xcode project.
 
 <p align="center">
   <img src="screenshots/logged-in.png" width="380" alt="Logged in — edit post, host detection, admin bar toggle">
@@ -13,10 +13,16 @@ A Chrome extension (Safari coming soon) that detects WordPress sites and puts ad
 
 ## Install
 
+### Chrome
+
 1. Download the latest zip from [Releases](https://github.com/jakemgold/wp-detective/releases)
 2. Unzip to a folder
 3. Open `chrome://extensions`, enable **Developer mode**
 4. Click **Load unpacked** and select the unzipped folder
+
+### Safari
+
+See [SAFARI.md](SAFARI.md) — requires Xcode and a one-time Xcode Run (⌘R).
 
 ## Features
 
