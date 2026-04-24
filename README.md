@@ -5,6 +5,15 @@ and site administrators. Instantly detect WordPress sites, jump to the
 editor for any page, identify the hosting provider, toggle the admin bar,
 and more — all from the toolbar.
 
+<p align="center">
+  <img src="screenshots/logged-in.png" width="380" alt="Logged in — edit post, host detection, admin bar toggle">
+  <img src="screenshots/dev-tools.png" width="380" alt="Developer tools — mobile preview, cache bust, clear site data">
+</p>
+<p align="center">
+  <img src="screenshots/wp-admin.png" width="380" alt="wp-admin editor — view/preview post, visit site">
+  <img src="screenshots/logged-out.png" width="380" alt="Logged out — WordPress version detected, login options">
+</p>
+
 ## Features
 
 - **WordPress detection** — Identifies WordPress sites via REST API
