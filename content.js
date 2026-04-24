@@ -20,6 +20,14 @@
       globalThis.WPDetect.detectLoggedInFromCookies(document.cookie);
   }
 
+  // Host detection: origin check first (catches local dev), then DOM
+  // scan (free). Both are sync — include the result so the background
+  // can skip the HEAD request when a signal is present.
+  const hostFromDOM = detection.isWordPress
+    ? (globalThis.WPHost.detectHostFromOrigin(location.origin) ||
+       globalThis.WPHost.detectHostFromDOM(document))
+    : null;
+
   try {
     chrome.runtime.sendMessage({
       type: 'WP_DETECTION',
@@ -27,6 +35,7 @@
       origin: location.origin,
       pathname: location.pathname,
       detection,
+      hostFromDOM,
     });
   } catch (_) { /* extension context invalidated */ }
 
@@ -83,8 +92,10 @@
     // reloaded. Visually it's correct; interactively it may be partial.
   }
 
-  // Only manage admin bar visibility when it's actually on the page.
-  if (detection.context.isLoggedIn) {
+  // Only manage admin bar visibility on the front end — never inside
+  // wp-admin, where the toolbar is integral to the admin UI.
+  const isWpAdmin = /\/wp-admin(\/|$)/.test(location.pathname);
+  if (detection.context.isLoggedIn && !isWpAdmin) {
     loadAdminBarPref().then((hidden) => {
       if (hidden) applyHide();
       else applyShow();
@@ -112,10 +123,24 @@
     }
 
     if (msg.type === 'APPLY_ADMIN_BAR_PREF') {
-      if (msg.hidden) applyHide();
-      else applyShow();
+      // Never toggle the admin bar inside wp-admin.
+      if (!isWpAdmin) {
+        if (msg.hidden) applyHide();
+        else applyShow();
+      }
       sendResponse({ ok: true });
       return;
+    }
+
+    if (msg.type === 'RESOLVE_HOST_HEADERS') {
+      // Same-origin HEAD request — cookies flow, no CORS, minimal payload.
+      fetch(location.href, { method: 'HEAD', credentials: 'include' })
+        .then((res) => {
+          const host = globalThis.WPHost.detectHostFromHeaders(res.headers);
+          sendResponse({ host });
+        })
+        .catch(() => sendResponse({ host: null }));
+      return true;
     }
 
     if (msg.type === 'RESOLVE_EDIT_URL_REST') {

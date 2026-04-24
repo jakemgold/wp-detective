@@ -1,8 +1,11 @@
 {
   "manifest_version": 3,
   "name": "WP Detective",
-  "version": "0.1.0",
-  "description": "Detects WordPress sites and provides quick admin access from the toolbar.",
+  "version": "0.7.0",
+  "short_name": "WP Detective",
+  "description": "Instantly detect WordPress sites, jump to the editor for any page, identify the hosting provider, and hide or show the admin bar on the front end — all from the toolbar.",
+  "author": "Jake Goldman, Partner at Fueled",
+  "homepage_url": "https://github.com/jakegoldman/wp-detective",
 
   "action": {
     "default_title": "WP Detective",
@@ -28,7 +31,7 @@
     },
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["lib/detect.js", "lib/rest.js", "content.js"],
+      "js": ["lib/detect.js", "lib/rest.js", "lib/host.js", "content.js"],
       "run_at": "document_idle",
       "all_frames": false
     }

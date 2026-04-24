@@ -159,6 +159,61 @@ body {
 
 .action-label { flex: 1; }
 
+/* Wrap pairs an action with a new-tab button */
+.action-wrap {
+  display: flex;
+  align-items: center;
+}
+.action-wrap .action {
+  flex: 1;
+  padding-right: 6px;
+}
+.action-newtab {
+  width: 32px;
+  padding: 10px 12px 10px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.1s;
+}
+.action-newtab svg { width: 14px; height: 14px; }
+.action-newtab:hover { color: var(--accent); }
+.action-newtab[disabled] { opacity: 0.38; cursor: default; }
+.action-newtab[disabled]:hover { color: var(--ink-muted); }
+.action-wrap:hover .action { background: var(--hover); }
+.action-wrap:hover .action-newtab { background: var(--hover); }
+
+/* Sign-out confirm button — hidden by default, revealed on first click */
+.signout-confirm {
+  padding: 4px 10px;
+  margin-right: 12px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, background 0.1s;
+}
+.signout-confirm.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.signout-confirm:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
 .action-hint {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -184,19 +239,37 @@ body {
 .action.destructive:hover { color: var(--danger); }
 .action.destructive:hover .action-icon { color: var(--danger); }
 
-/* Divider */
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 5px 14px;
+/* Info row — shown when admin bar is disabled in WP profile */
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 12px;
 }
+.info-text {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-dim);
+  letter-spacing: 0.01em;
+}
+.info-link {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  letter-spacing: 0.01em;
+}
+.info-link:hover { text-decoration: underline; }
 
 /* Toggle row */
 .toggle-row {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 10px 16px 12px;
+  padding: 10px 16px;
   cursor: pointer;
   transition: background 0.1s;
 }
@@ -208,13 +281,6 @@ body {
   font-size: 13px;
   color: var(--ink);
 }
-.toggle-label-hint {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--ink-dim);
-  margin-top: 2px;
-}
-
 .toggle-switch {
   position: relative;
   width: 30px; height: 17px;

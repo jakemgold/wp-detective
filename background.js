@@ -10,8 +10,9 @@
  */
 
 const CACHE_KEY = 'wp_detection_cache_v1';
-const REFRESH_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 1 week
-const PURGE_AFTER      = 28 * 24 * 60 * 60 * 1000; // 4 weeks
+const REFRESH_INTERVAL      = 7 * 24 * 60 * 60 * 1000;  // 1 week
+const PURGE_AFTER           = 28 * 24 * 60 * 60 * 1000;  // 4 weeks
+const HOST_REFRESH_INTERVAL = 90 * 24 * 60 * 60 * 1000;  // 90 days
 
 // --- Cache helpers --------------------------------------------------------
 
@@ -55,9 +56,10 @@ chrome.runtime.onStartup.addListener(purgeStale);
 chrome.runtime.onInstalled.addListener(purgeStale);
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (!msg || !sender.tab) return;
+  if (!msg) return;
 
   if (msg.type === 'WP_DETECTION') {
+    if (!sender.tab) return; // only accept from content scripts
     handleDetection(msg, sender).then(() => sendResponse({ ok: true }));
     return true; // keep channel open for async response
   }
@@ -69,7 +71,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function handleDetection(msg, sender) {
-  const { origin, detection } = msg;
+  const { origin, detection, hostFromDOM } = msg;
   const now = Date.now();
   const existing = await getEntry(origin);
 
@@ -81,6 +83,10 @@ async function handleDetection(msg, sender) {
   const cacheIsFresh = existing &&
                        existing.isWordPress &&
                        (now - existing.checkedAt) < REFRESH_INTERVAL;
+
+  // Host: prefer a fresh DOM signal, fall back to cached value.
+  const host = hostFromDOM || existing?.host || null;
+  const hostCheckedAt = hostFromDOM ? now : (existing?.hostCheckedAt || null);
 
   const entry = {
     origin,
@@ -96,10 +102,29 @@ async function handleDetection(msg, sender) {
       ? now
       : (existing?.checkedAt || now),
     lastSeen: now,
+    host,
+    hostCheckedAt,
   };
 
   await upsertEntry(origin, entry);
   await updateToolbar(sender.tab.id, entry.isWordPress, detection.context);
+
+  // If WordPress but host is still unknown and we haven't checked
+  // recently, ask the content script to inspect response headers.
+  // This is fire-and-forget — the popup reads from cache next time.
+  const needsHostCheck = entry.isWordPress && !entry.host &&
+    (!entry.hostCheckedAt || (now - entry.hostCheckedAt) > HOST_REFRESH_INTERVAL);
+
+  if (needsHostCheck) {
+    try {
+      const res = await chrome.tabs.sendMessage(
+        sender.tab.id, { type: 'RESOLVE_HOST_HEADERS' },
+      );
+      entry.host = res?.host || null;
+      entry.hostCheckedAt = now;
+      await upsertEntry(origin, entry);
+    } catch (_) { /* content script gone */ }
+  }
 }
 
 // --- Toolbar icon + title -------------------------------------------------

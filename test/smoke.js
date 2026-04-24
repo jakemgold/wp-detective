@@ -21,13 +21,15 @@ const path = require('path');
 
 const detectSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'detect.js'), 'utf8');
 const restSrc   = fs.readFileSync(path.join(__dirname, '..', 'lib', 'rest.js'),   'utf8');
+const hostSrc   = fs.readFileSync(path.join(__dirname, '..', 'lib', 'host.js'),   'utf8');
 
 function loadModules(dom) {
   const ctx = dom.window;
-  // Both files are IIFEs that attach to globalThis. Binding the jsdom
-  // window as globalThis lets them install WPDetect/WPRest there.
+  // All files are IIFEs that attach to globalThis. Binding the jsdom
+  // window as globalThis lets them install WPDetect/WPRest/WPHost there.
   new Function('globalThis', 'document', 'window', detectSrc)(ctx, ctx.document, ctx);
   new Function('globalThis', 'document', 'window', restSrc)(ctx, ctx.document, ctx);
+  new Function('globalThis', 'document', 'window', hostSrc)(ctx, ctx.document, ctx);
   return ctx;
 }
 
@@ -172,9 +174,98 @@ async function main() {
     assert(url && url.includes('lang=en'), 'resolver returns the admin bar href');
   }
 
-  // --- 8. Not a WordPress site ------------------------------------------
+  // --- 8. Cookie-based logged-in detection (wp-settings fallback) ------
   {
-    console.log('\n[8] Non-WordPress page');
+    console.log('\n[8] Cookie-based logged-in detection');
+    const dom = new JSDOM(`<html><body></body></html>`);
+    const ctx = loadModules(dom);
+    const check = ctx.WPDetect.detectLoggedInFromCookies;
+    assert(check('wordpress_logged_in_abc123=user%7C1234') === true,
+      'wordpress_logged_in cookie → logged in');
+    assert(check('wp-settings-1=a; wp-settings-time-1=123') === true,
+      'wp-settings cookie → logged in');
+    assert(check('other=x; wp-settings-42=val') === true,
+      'wp-settings cookie among others → logged in');
+    assert(check('some_other_cookie=value') === false,
+      'unrelated cookie → not logged in');
+    assert(check('') === false, 'empty string → not logged in');
+    assert(check(null) === false, 'null → not logged in');
+  }
+
+  // --- 9. Host detection from DOM assets --------------------------------
+  {
+    console.log('\n[9] Host detection from DOM asset URLs');
+    const dom = new JSDOM(`
+      <html><head>
+        <link rel="stylesheet" href="https://example.com/wp-content/themes/theme/style.css">
+        <script src="https://example.com.wpenginepowered.com/wp-includes/js/jquery.js"></script>
+      </head><body></body></html>
+    `);
+    const ctx = loadModules(dom);
+    assert(ctx.WPHost.detectHostFromDOM(ctx.document) === 'wpengine',
+      'WP Engine detected from .wpenginepowered.com asset');
+
+    const dom2 = new JSDOM(`
+      <html><head>
+        <img src="https://example.files.wordpress.com/2024/01/photo.jpg">
+      </head><body></body></html>
+    `);
+    const ctx2 = loadModules(dom2);
+    assert(ctx2.WPHost.detectHostFromDOM(ctx2.document) === 'wpcom',
+      'WordPress.com detected from .files.wordpress.com asset');
+
+    const dom3 = new JSDOM(`
+      <html><head>
+        <link rel="stylesheet" href="/wp-content/themes/theme/style.css">
+      </head><body></body></html>
+    `);
+    const ctx3 = loadModules(dom3);
+    assert(ctx3.WPHost.detectHostFromDOM(ctx3.document) === null,
+      'no host detected from generic WP assets');
+  }
+
+  // --- 10. Local dev detection from origin ------------------------------
+  {
+    console.log('\n[10] Local dev detection from origin');
+    const dom = new JSDOM(`<html><body></body></html>`);
+    const ctx = loadModules(dom);
+    const check = ctx.WPHost.detectHostFromOrigin;
+    assert(check('http://localhost:8080') === 'local', 'localhost with port');
+    assert(check('http://127.0.0.1') === 'local', '127.0.0.1');
+    assert(check('http://mysite.local') === 'local', '.local TLD');
+    assert(check('http://mysite.test') === 'local', '.test TLD');
+    assert(check('http://mysite.lndo.site') === 'local', 'Lando');
+    assert(check('http://mysite.ddev.site') === 'local', 'DDEV');
+    assert(check('https://fueled.com') === null, 'production domain');
+  }
+
+  // --- 11. Host detection from response headers -------------------------
+  {
+    console.log('\n[11] Host detection from response headers');
+    const dom = new JSDOM(`<html><body></body></html>`);
+    const ctx = loadModules(dom);
+    const detect = ctx.WPHost.detectHostFromHeaders;
+
+    // Simulate a Headers-like object with a get() method
+    const makeHeaders = (obj) => ({ get: (k) => obj[k.toLowerCase()] ?? null });
+
+    assert(detect(makeHeaders({ 'wpe-backend': 'apache' })) === 'wpengine',
+      'WP Engine from wpe-backend header');
+    assert(detect(makeHeaders({ 'x-pantheon-styx-hostname': 'endpoint123' })) === 'pantheon',
+      'Pantheon from x-pantheon-styx-hostname header');
+    assert(detect(makeHeaders({ 'x-kinsta-cache': 'HIT' })) === 'kinsta',
+      'Kinsta from x-kinsta-cache header');
+    assert(detect(makeHeaders({ 'x-powered-by': 'WordPress VIP <abc>' })) === 'wpvip',
+      'VIP from x-powered-by header');
+    assert(detect(makeHeaders({ 'x-powered-by': 'WordPress.com' })) === 'wpcom',
+      'WordPress.com from x-powered-by header');
+    assert(detect(makeHeaders({ 'server': 'nginx', 'x-cache': 'HIT' })) === null,
+      'no host from generic nginx headers');
+  }
+
+  // --- 12. Not a WordPress site -----------------------------------------
+  {
+    console.log('\n[12] Non-WordPress page');
     const dom = new JSDOM(`<html><head><title>Not WP</title></head><body>hello</body></html>`);
     const ctx = loadModules(dom);
     const det = ctx.WPDetect.detectWordPress(ctx.document);
