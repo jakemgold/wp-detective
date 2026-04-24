@@ -73,7 +73,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 async function handleDetection(msg, sender) {
   const { origin, detection, hostFromDOM } = msg;
   const now = Date.now();
-  const existing = await getEntry(origin);
+  const cache = await getCache();
+  const existing = cache[origin] || null;
 
   // Decide whether to trust this detection or the cache.
   // - If the current page strongly suggests WP, use it.
@@ -106,12 +107,9 @@ async function handleDetection(msg, sender) {
     hostCheckedAt,
   };
 
-  await upsertEntry(origin, entry);
-  await updateToolbar(sender.tab.id, entry.isWordPress, detection.context);
-
   // If WordPress but host is still unknown and we haven't checked
   // recently, ask the content script to inspect response headers.
-  // This is fire-and-forget — the popup reads from cache next time.
+  // Resolve before the first write so we don't write twice.
   const needsHostCheck = entry.isWordPress && !entry.host &&
     (!entry.hostCheckedAt || (now - entry.hostCheckedAt) > HOST_REFRESH_INTERVAL);
 
@@ -122,9 +120,12 @@ async function handleDetection(msg, sender) {
       );
       entry.host = res?.host || null;
       entry.hostCheckedAt = now;
-      await upsertEntry(origin, entry);
     } catch (_) { /* content script gone */ }
   }
+
+  cache[origin] = entry;
+  await writeCache(cache);
+  await updateToolbar(sender.tab.id, entry.isWordPress, detection.context);
 }
 
 // --- Toolbar icon + title -------------------------------------------------

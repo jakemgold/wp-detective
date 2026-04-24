@@ -108,16 +108,11 @@
     if (!msg) return;
 
     if (msg.type === 'GET_LIVE_DETECTION') {
-      const fresh = globalThis.WPDetect.detectWordPress(document);
-      if (!fresh.context.isLoggedIn) {
-        fresh.context.isLoggedIn =
-          globalThis.WPDetect.detectLoggedInFromCookies(document.cookie);
-      }
       sendResponse({
         url: location.href,
         origin: location.origin,
         pathname: location.pathname,
-        detection: fresh,
+        detection,
       });
       return;
     }
@@ -147,13 +142,8 @@
       // Async — return true to keep the message channel open while we
       // hit the REST API from the page context (same-origin, cookies
       // flow for free).
-      const fresh = globalThis.WPDetect.detectWordPress(document);
-      if (!fresh.context.isLoggedIn) {
-        fresh.context.isLoggedIn =
-          globalThis.WPDetect.detectLoggedInFromCookies(document.cookie);
-      }
       globalThis.WPRest
-        .resolveEditUrlAsync(fresh.context, location.origin)
+        .resolveEditUrlAsync(detection.context, location.origin)
         .then((url) => sendResponse({ url: url || null }))
         .catch(() => sendResponse({ url: null }));
       return true;
