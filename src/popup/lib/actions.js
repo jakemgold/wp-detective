@@ -119,6 +119,18 @@ export async function applyAdminBarPref(hidden) {
 	}
 }
 
+export async function applyBlockInspectorPref(enabled) {
+	const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+	try {
+		await chrome.tabs.sendMessage(tab.id, {
+			type: 'APPLY_BLOCK_INSPECTOR',
+			enabled,
+		});
+	} catch (_) {
+		/* content script gone — next load will pick it up */
+	}
+}
+
 export async function requestRestEditUrl() {
 	try {
 		const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

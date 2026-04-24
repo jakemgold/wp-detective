@@ -102,6 +102,43 @@
     });
   }
 
+  // -- Block inspector -----------------------------------------------------
+  // Outlines `wp-block-*` elements on the frontend. Skipped inside wp-admin
+  // because the editor has its own block tooling.
+  const blockInspectorSupported = !isWpAdmin;
+
+  async function loadBlockInspectorPref() {
+    try {
+      const data = await chrome.storage.local.get('wp_preferences_v1');
+      const prefs = (data.wp_preferences_v1 || {})[location.origin];
+      return !!(prefs && prefs.blockInspectorEnabled);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function applyBlockInspector(enabled) {
+    if (!blockInspectorSupported || !globalThis.WPDBlockInspector) return;
+    if (enabled) {
+      const ctx = detection.context || {};
+      globalThis.WPDBlockInspector.enable({
+        isLoggedIn: !!ctx.isLoggedIn,
+        postId: ctx.postId,
+        postType: ctx.postType,
+        restApiRoot: ctx.restApiRoot,
+        origin: location.origin,
+      });
+    } else {
+      globalThis.WPDBlockInspector.disable();
+    }
+  }
+
+  if (blockInspectorSupported) {
+    loadBlockInspectorPref().then((enabled) => {
+      if (enabled) applyBlockInspector(true);
+    });
+  }
+
   // -- Popup messaging -----------------------------------------------------
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -159,6 +196,12 @@
         if (msg.hidden) applyHide();
         else applyShow();
       }
+      sendResponse({ ok: true });
+      return;
+    }
+
+    if (msg.type === 'APPLY_BLOCK_INSPECTOR') {
+      applyBlockInspector(!!msg.enabled);
       sendResponse({ ok: true });
       return;
     }

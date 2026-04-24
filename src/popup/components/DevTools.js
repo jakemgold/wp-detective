@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Collapsible, Icon } from '@wordpress/ui';
-import { chevronDown, code, mobile, update, trash, search } from '@wordpress/icons';
+import { chevronDown, code, mobile, update, trash, search, layout } from '@wordpress/icons';
 import { ActionRow } from './ActionRow';
 import { ToggleRow } from './ToggleRow';
 import { InlineConfirm } from './InlineConfirm';
-import { runAction, toggleQueryMonitor } from '../lib/actions';
+import { usePrefs } from '../hooks/usePrefs';
+import { runAction, toggleQueryMonitor, applyBlockInspectorPref } from '../lib/actions';
 
 const OPEN_KEY = 'wp_devtools_open';
 
 export function DevTools({ origin, url, hasQueryMonitor = false, qmOpen = false }) {
 	const [open, setOpen] = useState(false);
 	const [hydrated, setHydrated] = useState(false);
+	const [prefs, savePref] = usePrefs(origin);
 	// Local mirror of QM panel state — `qmOpen` from props is the snapshot
-	// at popup-open time; clicks update optimistically before the popup closes.
+	// at popup-open time; clicks update optimistically.
 	const [qmChecked, setQmChecked] = useState(qmOpen);
 	useEffect(() => { setQmChecked(qmOpen); }, [qmOpen]);
 
@@ -26,6 +28,11 @@ export function DevTools({ origin, url, hasQueryMonitor = false, qmOpen = false 
 	const handleOpenChange = (next) => {
 		setOpen(next);
 		chrome.storage.local.set({ [OPEN_KEY]: next });
+	};
+
+	const toggleBlockInspector = async (enabled) => {
+		await savePref('blockInspectorEnabled', enabled);
+		await applyBlockInspectorPref(enabled);
 	};
 
 	// Wait for the persisted open/closed state to load so the panel doesn't
@@ -45,6 +52,12 @@ export function DevTools({ origin, url, hasQueryMonitor = false, qmOpen = false 
 			</Collapsible.Trigger>
 			<Collapsible.Panel className="wpd-devtools__panel">
 				<div className="wpd-devtools__items">
+					<ToggleRow
+						icon={layout}
+						label="Highlight Blocks"
+						checked={!!prefs.blockInspectorEnabled}
+						onChange={toggleBlockInspector}
+					/>
 					<ActionRow
 						icon={mobile}
 						label="Mobile Preview"
