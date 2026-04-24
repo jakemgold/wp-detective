@@ -251,7 +251,7 @@ function renderDetected(result, prefs, host) {
         <button class="action" id="cleardata-btn"
                 title="Clear all cookies, localStorage, and sessionStorage for this site. WordPress login cookies are preserved. Useful for testing forms, cache behavior, and tracking scripts.">
           <span class="action-icon">${iconTrash()}</span>
-          <span class="action-label">Clear cookies & data (keep WP login)</span>
+          <span class="action-label">Clear site data (keep WP login)</span>
         </button>
         <button class="cleardata-confirm" id="cleardata-confirm">Confirm</button>
       </div>
