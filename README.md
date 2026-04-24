@@ -109,3 +109,7 @@ Vanilla JS throughout — no build step, no framework, no bundler.
 ## License
 
 MIT
+
+## Like what you see?
+
+<a href="http://10up.com/contact/"><img src="https://github.com/10up/.github/raw/trunk/profile/10up-github-banner.jpg" width="850" alt="Work with the 10up WordPress Practice at Fueled"></a>
