@@ -150,6 +150,54 @@ async function updateToolbar(tabId, isWordPress, context) {
   } catch (_) { /* tab may have closed */ }
 }
 
+// --- Keyboard shortcut: edit this page ------------------------------------
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'edit-this-page') return;
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.url || !/^https?:/.test(tab.url)) return;
+
+  // Ask the content script for live detection — it has the freshest context.
+  let result;
+  try {
+    result = await chrome.tabs.sendMessage(tab.id, { type: 'GET_LIVE_DETECTION' });
+  } catch (_) { return; /* content script unreachable */ }
+
+  if (!result?.detection?.isWordPress) return;
+  const ctx = result.detection.context || {};
+  if (!ctx.isLoggedIn) return;
+
+  const origin = result.origin;
+
+  // Try sync resolution first (covers most cases).
+  // resolveEditUrlSync isn't available here (it's in lib/rest.js, loaded
+  // only in content scripts), so we inline the priority logic.
+  let editUrl = ctx.adminBarEditHref || null;
+
+  if (!editUrl && ctx.postId && ctx.pageType === 'single') {
+    editUrl = `${origin}/wp-admin/post.php?post=${ctx.postId}&action=edit`;
+  }
+  if (!editUrl && ctx.pageType === 'term' && ctx.taxonomy && ctx.termId) {
+    editUrl = `${origin}/wp-admin/term.php?taxonomy=${encodeURIComponent(ctx.taxonomy)}&tag_ID=${ctx.termId}`;
+  }
+  if (!editUrl && ctx.pageType === 'author' && ctx.authorId) {
+    editUrl = `${origin}/wp-admin/user-edit.php?user_id=${ctx.authorId}`;
+  }
+
+  // If sync didn't resolve, try the REST fallback via content script.
+  if (!editUrl) {
+    try {
+      const res = await chrome.tabs.sendMessage(tab.id, { type: 'RESOLVE_EDIT_URL_REST' });
+      editUrl = res?.url || null;
+    } catch (_) { /* content script gone */ }
+  }
+
+  if (editUrl) {
+    chrome.tabs.update(tab.id, { url: editUrl });
+  }
+});
+
 // Re-check cache when a tab changes URL, so the icon reflects cached state
 // even before the content script reports in.
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {

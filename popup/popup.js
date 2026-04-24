@@ -148,6 +148,7 @@ function renderDetected(result, prefs, host) {
           icon: iconEye,
           label: `${verb} this ${typeLabel}`,
           newTab: true,
+          copyUrl: true,
           dataUrl: ctx.adminBarViewHref,
         });
       }
@@ -164,14 +165,21 @@ function renderDetected(result, prefs, host) {
       const syncUrl = resolveEditUrlSync(ctx, origin);
       const pendingRest = !syncUrl && canResolveViaRest(ctx);
 
+      const isMac = navigator.platform?.startsWith('Mac') ?? false;
+      const shortcutHint = isMac ? 'Alt⇧E' : 'Alt+Shift+E';
+
       html += actionRow({
         id: 'edit',
         icon: iconEdit,
         label: editLabel(ctx, !!syncUrl || pendingRest),
-        hint: pendingRest ? '<span class="spinner"></span>' : null,
+        hint: pendingRest ? '<span class="spinner"></span>' : shortcutHint,
+        hintTitle: isMac
+          ? 'Edit this page by pressing Option + Shift + E'
+          : 'Edit this page by pressing Alt + Shift + E',
         disabled: !syncUrl,
         dataUrl: syncUrl || null,
         newTab: true,
+        copyUrl: true,
       });
     }
     html += actionRow({
@@ -208,15 +216,6 @@ function renderDetected(result, prefs, host) {
     html += actionRow({ id: 'login-return', icon: iconReturn, label: 'Admin login, return to page', newTab: true });
   }
 
-  // Cache bust — available on all detected WP pages (logged in or out).
-  if (!isWpAdmin) {
-    html += actionRow({
-      id: 'cachebust',
-      icon: iconRefresh,
-      label: 'Attempt uncached view',
-    });
-  }
-
   if (isLoggedIn) {
     html += `
       <div class="action-wrap signout-wrap" id="signout-wrap">
@@ -229,17 +228,49 @@ function renderDetected(result, prefs, host) {
     `;
   }
 
+  if (!isWpAdmin) {
+    html += `
+      <button class="devtools-toggle" id="devtools-toggle">
+        <span class="devtools-label">Developer tools</span>
+        <span class="devtools-chevron" id="devtools-chevron">&#x25B8;</span>
+      </button>
+      <div class="devtools-panel" id="devtools-panel">
+    `;
+    html += actionRow({
+      id: 'mobile-preview',
+      icon: iconPhone,
+      label: 'Preview mobile size',
+    });
+    html += actionRow({
+      id: 'cachebust',
+      icon: iconRefresh,
+      label: 'Attempt uncached view',
+    });
+    html += `
+      <div class="action-wrap" id="cleardata-wrap">
+        <button class="action" id="cleardata-btn"
+                title="Clear all cookies, localStorage, and sessionStorage for this site. WordPress login cookies are preserved. Useful for testing forms, cache behavior, and tracking scripts.">
+          <span class="action-icon">${iconTrash()}</span>
+          <span class="action-label">Clear cookies & data (keep WP login)</span>
+        </button>
+        <button class="cleardata-confirm" id="cleardata-confirm">Confirm</button>
+      </div>
+    `;
+    html += `</div>`;
+  }
+
   html += `</div>`;
   root.innerHTML = html;
   wire(result, prefs);
 }
 
-function actionRow({ id, icon, label, hint, disabled, destructive, dataUrl, newTab }) {
+function actionRow({ id, icon, label, hint, hintTitle, disabled, destructive, dataUrl, newTab, copyUrl }) {
   // `hint` may contain HTML (e.g. the spinner span) — callers pass raw
   // HTML when they mean to; plain strings are escaped below.
   const hintHtml = hint == null
     ? ''
     : (hint.startsWith('<') ? hint : esc(hint));
+  const titleAttr = hintTitle ? ` title="${esc(hintTitle)}"` : '';
   const btn = `
     <button class="action${destructive ? ' destructive' : ''}"
             data-action="${id}"
@@ -247,15 +278,21 @@ function actionRow({ id, icon, label, hint, disabled, destructive, dataUrl, newT
             ${disabled ? 'disabled' : ''}>
       <span class="action-icon">${icon()}</span>
       <span class="action-label">${esc(label)}</span>
-      ${hintHtml ? `<span class="action-hint">${hintHtml}</span>` : ''}
+      ${hintHtml ? `<span class="action-hint"${titleAttr}>${hintHtml}</span>` : ''}
     </button>
   `;
-  if (!newTab) return btn;
+  if (!newTab && !copyUrl) return btn;
+  const copyBtn = copyUrl
+    ? `<button class="action-copy" data-action="${id}" title="Copy URL"
+              ${disabled ? 'disabled' : ''}>${iconCopy()}</button>`
+    : '';
+  const newTabBtn = newTab
+    ? `<button class="action-newtab" data-action="${id}" title="Open in new tab"
+              ${disabled ? 'disabled' : ''}>${iconNewTab()}</button>`
+    : '';
   return `
     <div class="action-wrap">
-      ${btn}
-      <button class="action-newtab" data-action="${id}" title="Open in new tab"
-              ${disabled ? 'disabled' : ''}>${iconNewTab()}</button>
+      ${btn}${copyBtn}${newTabBtn}
     </div>
   `;
 }
@@ -277,6 +314,21 @@ function wire(result, prefs) {
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
       handleAction(btn.dataset.action, { origin, url, ctx }, true);
+    });
+  });
+
+  document.querySelectorAll('.action-copy[data-action]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      const action = btn.dataset.action;
+      const actionBtn = btn.parentElement?.querySelector(`.action[data-action="${action}"]`);
+      const copyUrl = actionBtn?.dataset.url;
+      if (!copyUrl) return;
+      try {
+        await navigator.clipboard.writeText(copyUrl);
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+      } catch (_) { /* clipboard denied */ }
     });
   });
 
@@ -311,6 +363,27 @@ function wire(result, prefs) {
     });
   }
 
+  // Developer tools: collapsible section, state persisted globally.
+  const devtoolsToggle = document.getElementById('devtools-toggle');
+  const devtoolsPanel = document.getElementById('devtools-panel');
+  const devtoolsChevron = document.getElementById('devtools-chevron');
+
+  if (devtoolsToggle && devtoolsPanel) {
+    // Restore persisted state
+    chrome.storage.local.get('wp_devtools_open').then((data) => {
+      if (data.wp_devtools_open) {
+        devtoolsPanel.classList.add('open');
+        devtoolsChevron.classList.add('open');
+      }
+    });
+
+    devtoolsToggle.addEventListener('click', async () => {
+      const isOpen = devtoolsPanel.classList.toggle('open');
+      devtoolsChevron.classList.toggle('open', isOpen);
+      await chrome.storage.local.set({ wp_devtools_open: isOpen });
+    });
+  }
+
   // Sign-out: first click reveals a "Confirm" button that auto-hides
   // after 10 seconds. No modal, no accidental logouts.
   const signoutBtn = document.getElementById('signout-btn');
@@ -332,6 +405,29 @@ function wire(result, prefs) {
       e.stopPropagation();
       clearTimeout(signoutTimer);
       handleAction('signout', { origin, url, ctx });
+    });
+  }
+
+  // Clear data: same inline confirm pattern as sign-out.
+  const cleardataBtn = document.getElementById('cleardata-btn');
+  const cleardataConfirm = document.getElementById('cleardata-confirm');
+  let cleardataTimer = null;
+
+  if (cleardataBtn && cleardataConfirm) {
+    cleardataBtn.addEventListener('click', () => {
+      const showing = cleardataConfirm.classList.toggle('visible');
+      clearTimeout(cleardataTimer);
+      if (showing) {
+        cleardataTimer = setTimeout(() => {
+          cleardataConfirm.classList.remove('visible');
+        }, 10000);
+      }
+    });
+
+    cleardataConfirm.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearTimeout(cleardataTimer);
+      handleAction('clear-data', { origin, url, ctx });
     });
   }
 }
@@ -367,6 +463,24 @@ async function handleAction(action, { origin, url, ctx }, newTab = false) {
       target = u.toString();
       break;
     }
+    case 'mobile-preview': {
+      // Popup window sized to match an iPhone 16/17 Pro (393 × 852).
+      // Chrome's popup type adds ~60px of chrome (title bar + URL bar),
+      // so the actual viewport is slightly shorter — close enough for
+      // a responsive preview without the window looking oversized.
+      await chrome.windows.create({
+        url,
+        type: 'popup',
+        width: 393,
+        height: 852,
+      });
+      window.close();
+      return;
+    }
+    case 'clear-data': {
+      await clearSiteData(origin, url);
+      return;
+    }
   }
   if (!target) return;
   if (newTab) {
@@ -374,6 +488,47 @@ async function handleAction(action, { origin, url, ctx }, newTab = false) {
   } else {
     await chrome.tabs.update({ url: target });
   }
+  window.close();
+}
+
+// -- Clear site data -----------------------------------------------------
+
+const WP_COOKIE_PATTERNS = [
+  /^wordpress_/,
+  /^wp-settings-/,
+  /^wp_/,
+];
+
+function isWpCookie(name) {
+  return WP_COOKIE_PATTERNS.some((re) => re.test(name));
+}
+
+async function clearSiteData(origin, url) {
+  // 1. Remove all cookies for this origin except WordPress auth cookies.
+  const parsedUrl = new URL(origin);
+  const allCookies = await chrome.cookies.getAll({ domain: parsedUrl.hostname });
+  const removePromises = allCookies
+    .filter((c) => !isWpCookie(c.name))
+    .map((c) => {
+      const cookieUrl = `${c.secure ? 'https' : 'http'}://${c.domain.replace(/^\./, '')}${c.path}`;
+      return chrome.cookies.remove({ url: cookieUrl, name: c.name });
+    });
+  await Promise.all(removePromises);
+
+  // 2. Clear localStorage and sessionStorage via the content script.
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        try { localStorage.clear(); } catch (_) {}
+        try { sessionStorage.clear(); } catch (_) {}
+      },
+    });
+  } catch (_) { /* content script unreachable */ }
+
+  // 3. Reload the page so the clean state takes effect.
+  await chrome.tabs.reload(tab.id);
   window.close();
 }
 
@@ -407,6 +562,7 @@ async function kickoffRestResolution(ctx) {
   if (!btn) return; // popup closed or re-rendered
 
   const newtabBtn = document.querySelector('.action-newtab[data-action="edit"]');
+  const copyBtn = document.querySelector('.action-copy[data-action="edit"]');
   const label = btn.querySelector('.action-label');
   const hint  = btn.querySelector('.action-hint');
 
@@ -414,11 +570,13 @@ async function kickoffRestResolution(ctx) {
     btn.disabled = false;
     btn.dataset.url = resolvedUrl;
     if (newtabBtn) newtabBtn.disabled = false;
+    if (copyBtn) copyBtn.disabled = false;
     if (label) label.textContent = editLabel(ctx, true);
     if (hint) hint.remove();
   } else {
     btn.disabled = true;
     if (newtabBtn) newtabBtn.disabled = true;
+    if (copyBtn) copyBtn.disabled = true;
     if (label) label.textContent = editDisabledLabel(ctx);
     if (hint) hint.remove();
   }
@@ -508,8 +666,17 @@ function iconEye() {
 function iconGlobe() {
   return `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5.5"/><path d="M2.5 8h11"/><ellipse cx="8" cy="8" rx="2.5" ry="5.5"/></svg>`;
 }
+function iconCopy() {
+  return `<svg class="icon-copy" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 11V3a1 1 0 0 1 1-1h8"/></svg><svg class="icon-check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 4.5"/></svg>`;
+}
 function iconNewTab() {
   return `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.5H13.5V7"/><path d="M13.5 2.5L7.5 8.5"/><path d="M11 9v3.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1H7"/></svg>`;
+}
+function iconTrash() {
+  return `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h10"/><path d="M6 4V2.5h4V4"/><path d="M4.5 4l.5 9h6l.5-9"/></svg>`;
+}
+function iconPhone() {
+  return `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="1.5" width="8" height="13" rx="1.5"/><line x1="6.5" y1="12" x2="9.5" y2="12"/></svg>`;
 }
 function iconRefresh() {
   return `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5A5.5 5.5 0 0 1 13 5"/><path d="M13.5 9.5A5.5 5.5 0 0 1 3 11"/><path d="M13 2v3h-3"/><path d="M3 14v-3h3"/></svg>`;

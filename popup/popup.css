@@ -168,6 +168,30 @@ body {
   flex: 1;
   padding-right: 6px;
 }
+
+/* Copy URL button — shows clipboard icon, flashes checkmark on success */
+.action-copy {
+  width: 28px;
+  padding: 10px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.1s;
+}
+.action-copy svg { width: 14px; height: 14px; }
+.action-copy .icon-check { display: none; }
+.action-copy:hover { color: var(--accent); }
+.action-copy[disabled] { opacity: 0.38; cursor: default; }
+.action-copy[disabled]:hover { color: var(--ink-muted); }
+.action-copy.copied { color: var(--active); }
+.action-copy.copied .icon-copy { display: none; }
+.action-copy.copied .icon-check { display: block; }
+
 .action-newtab {
   width: 32px;
   padding: 10px 12px 10px 4px;
@@ -185,8 +209,42 @@ body {
 .action-newtab:hover { color: var(--accent); }
 .action-newtab[disabled] { opacity: 0.38; cursor: default; }
 .action-newtab[disabled]:hover { color: var(--ink-muted); }
-.action-wrap:hover .action { background: var(--hover); }
+.action-wrap:hover .action,
+.action-wrap:hover .action-copy,
 .action-wrap:hover .action-newtab { background: var(--hover); }
+
+/* Developer tools — collapsible section */
+.devtools-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.devtools-toggle:hover { background: var(--hover); }
+.devtools-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ink-dim);
+  letter-spacing: 0.01em;
+}
+.devtools-chevron {
+  font-size: 10px;
+  color: var(--ink-muted);
+  transition: transform 0.15s;
+}
+.devtools-chevron.open { transform: rotate(90deg); }
+.devtools-panel {
+  display: none;
+}
+.devtools-panel.open {
+  display: block;
+}
 
 /* Sign-out confirm button — hidden by default, revealed on first click */
 .signout-confirm {
@@ -211,6 +269,32 @@ body {
 }
 .signout-confirm:hover {
   background: var(--danger);
+  color: #fff;
+}
+
+/* Clear data confirm — same pattern, accent color */
+.cleardata-confirm {
+  padding: 4px 10px;
+  margin-right: 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, background 0.1s;
+}
+.cleardata-confirm.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cleardata-confirm:hover {
+  background: var(--accent);
   color: #fff;
 }
 
