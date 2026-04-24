@@ -61,8 +61,8 @@
       hideStyle.id = 'wp-detective-adminbar-hide';
       hideStyle.textContent = `
         #wpadminbar { display: none !important; }
-        html { margin-top: 0 !important; }
-        html.admin-bar, html.wp-toolbar { margin-top: 0 !important; }
+        html { margin-top: 0 !important; --wp-admin--admin-bar--height: 0px !important; }
+        html.admin-bar, html.wp-toolbar { margin-top: 0 !important; --wp-admin--admin-bar--height: 0px !important; }
       `;
       document.documentElement.appendChild(hideStyle);
     }
@@ -147,6 +147,24 @@
         .then((url) => sendResponse({ url: url || null }))
         .catch(() => sendResponse({ url: null }));
       return true;
+    }
+
+    if (msg.type === 'TOGGLE_QUERY_MONITOR') {
+      // QM toggles its main panel via a click on the admin-bar link, OR
+      // directly via the `.qm-show` class on #query-monitor-main. The
+      // admin-bar click path is preferred because it also handles the
+      // keyboard focus trap QM sets up; we fall back to the class toggle
+      // when the admin bar isn't rendered (user hid it).
+      const barLink = document.querySelector('#wp-admin-bar-query-monitor > a');
+      const panel = document.getElementById('query-monitor-main');
+      if (barLink) {
+        barLink.click();
+      } else if (panel) {
+        panel.classList.toggle('qm-show');
+        panel.classList.toggle('qm-peek', false);
+      }
+      sendResponse({ ok: !!(barLink || panel) });
+      return;
     }
   });
 })();

@@ -1,0 +1,738 @@
+/**
+ * Popup styles — built on the WordPress Design System tokens emitted by
+ * @wordpress/ui. The component library injects its own rules at import time;
+ * this sheet layers structure (popup chrome, section spacing) and a
+ * card-button primitive the library doesn't ship yet.
+ *
+ * Aesthetic mirrors the WordPress Studio app: hero header, badge row for
+ * context, bordered card action rows, subtle section labels.
+ */
+
+:root {
+	--wpd-width: 380px;
+	--wpd-pad-x: 16px;
+	--wpd-pad-y: 16px;
+	--wpd-gap: 6px;
+
+	/* Fall-through to WPDS tokens where possible so we pick up future theme
+	 * swaps automatically. Fallbacks match the rendered values of @wordpress/ui
+	 * in its default (no-Theme) state. */
+	--wpd-bg: var(--wpds-color-bg-surface-neutral-strong, #fff);
+	--wpd-surface: var(--wpds-color-bg-surface-neutral-strong, #fff);
+	--wpd-border: var(--wpds-color-stroke-surface-neutral-weak, #e0e0e0);
+	--wpd-border-strong: var(--wpds-color-stroke-surface-neutral, #c3c3c3);
+	--wpd-ink: var(--wpds-color-fg-content-neutral, #1e1e1e);
+	--wpd-ink-dim: var(--wpds-color-fg-content-neutral-secondary, #757575);
+	--wpd-ink-muted: var(--wpds-color-fg-content-neutral-tertiary, #949494);
+	--wpd-hover: var(--wpds-color-bg-interactive-neutral-weak-active, #ededed);
+	--wpd-accent: var(--wp-admin-theme-color, #3858e9);
+	--wpd-active: #10a86a;
+	--wpd-radius: var(--wpds-border-radius-lg, 8px);
+	--wpd-radius-sm: var(--wpds-border-radius-md, 4px);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--wpd-bg: #121315;
+		--wpd-surface: #1c1f22;
+		--wpd-border: #2a2e32;
+		--wpd-border-strong: #3a3d41;
+		--wpd-ink: #f2efe8;
+		--wpd-ink-dim: #a0a0a0;
+		--wpd-ink-muted: #6e6e6e;
+		--wpd-hover: #24282c;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+
+/* Chrome's popup window is a hard-edged rectangle on most platforms — CSS
+ * border-radius on `html` is ignored by the native frame. The visual trick:
+ * make html itself the rounded surface and give it a uniform background that
+ * matches body, so the popup reads as one continuous rounded card even where
+ * the native frame is technically square underneath. */
+html {
+	background: var(--wpd-bg);
+	border-radius: var(--wpd-popup-radius, 12px);
+	overflow: hidden;
+}
+
+body {
+	width: var(--wpd-width);
+	background: var(--wpd-bg);
+	color: var(--wpd-ink);
+	font-family: var(--wpds-typography-font-family-body, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif);
+	font-size: var(--wpds-typography-font-size-md, 13px);
+	line-height: var(--wpds-typography-line-height-sm, 20px);
+	-webkit-font-smoothing: antialiased;
+	border-radius: inherit;
+	overflow-x: hidden;
+	/* Chrome clamps popups to ~600px tall; let the body scroll vertically so
+	 * long content (logged-in + dev tools open) stays reachable. */
+	overflow-y: auto;
+}
+
+#root {
+	min-height: 140px;
+	animation: wpd-rise 0.24s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+
+@keyframes wpd-rise {
+	from {
+		opacity: 0;
+		transform: translateY(-3px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Header ================================================================ */
+
+.wpd-header {
+	padding: 20px var(--wpd-pad-x) 14px;
+	background: var(--wpd-surface);
+}
+
+.wpd-header__title {
+	display: block;
+	font-family: var(--wpds-typography-font-family-body, -apple-system, system-ui, sans-serif);
+	font-size: 19px;
+	font-weight: 600;
+	line-height: 1.2;
+	letter-spacing: -0.015em;
+	color: var(--wpd-ink);
+	margin: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wpd-header__meta {
+	margin-top: 8px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+}
+
+/* Sections ============================================================== */
+
+.wpd-section {
+	/* Bottom padding gives the last card breathing room when Developer
+	 * tools isn't rendered (e.g. inside wp-admin). When DevTools *is*
+	 * below, its own top margin + divider provides the visual break. */
+	padding: 12px var(--wpd-pad-x) 14px;
+}
+
+.wpd-section__label {
+	display: block;
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wpd-ink-dim);
+	margin-bottom: 8px;
+	padding: 0 2px;
+}
+
+.wpd-section__items {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpd-gap);
+}
+
+/* Action card =========================================================== */
+
+/* The card-button primitive: a full-width surface with leading icon, label,
+ * optional trailing hint. Appears in both "action list" and "dev tools" sections.
+ * Wraps a native <button> so it's accessible + keyboard-navigable. */
+.wpd-card-row {
+	display: flex;
+	align-items: stretch;
+	background: var(--wpd-surface);
+	border: 1px solid var(--wpd-border);
+	border-radius: var(--wpd-radius);
+	overflow: hidden;
+	transition: border-color 0.12s, background-color 0.12s;
+
+	&:hover:not(:has(.wpd-card__main[disabled])) {
+		border-color: var(--wpd-border-strong);
+	}
+}
+
+.wpd-card__main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	border: 0;
+	background: transparent;
+	color: var(--wpd-ink);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: background-color 0.1s;
+
+	&:hover:not([disabled]) {
+		background: var(--wpd-hover);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
+	}
+
+	&[disabled] {
+		opacity: 0.5;
+		cursor: default;
+	}
+}
+
+.wpd-card__icon {
+	flex-shrink: 0;
+	width: 20px;
+	height: 20px;
+	display: grid;
+	place-items: center;
+	color: var(--wpd-ink);
+
+	svg {
+		width: 20px;
+		height: 20px;
+		fill: currentColor;
+	}
+}
+
+.wpd-card__label {
+	flex: 1;
+	min-width: 0;
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wpd-card__hint {
+	flex-shrink: 0;
+	color: var(--wpd-ink-muted);
+	font-family: var(--wpds-typography-font-family-mono, ui-monospace, "SF Mono", monospace);
+	font-size: 11px;
+	font-weight: 400;
+}
+
+/* Trailing icon buttons (copy, new tab) share a left-border divider */
+.wpd-card__aux {
+	display: flex;
+	border-left: 1px solid var(--wpd-border);
+}
+
+.wpd-card__aux-btn {
+	width: 34px;
+	border: 0;
+	background: transparent;
+	color: var(--wpd-ink-dim);
+	cursor: pointer;
+	display: grid;
+	place-items: center;
+	transition: color 0.1s, background-color 0.1s;
+
+	& + & {
+		border-left: 1px solid var(--wpd-border);
+	}
+
+	&:hover:not([disabled]) {
+		background: var(--wpd-hover);
+		color: var(--wpd-accent);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
+	}
+
+	&[disabled] {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	&.is-copied {
+		color: var(--wpd-active);
+	}
+
+	svg {
+		width: 16px;
+		height: 16px;
+	}
+}
+
+/* Toggle-row variant — same card chrome, switch at the right ------------ */
+
+.wpd-toggle-row {
+	.wpd-card__main {
+		justify-content: space-between;
+	}
+}
+
+.wpd-switch {
+	position: relative;
+	width: 30px;
+	height: 18px;
+	background: var(--wpd-border-strong);
+	border-radius: 10px;
+	flex-shrink: 0;
+	transition: background 0.18s;
+
+	&.is-on {
+		background: var(--wpd-accent);
+	}
+}
+
+.wpd-switch__thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 14px;
+	height: 14px;
+	background: #fff;
+	border-radius: 50%;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+	transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+	.wpd-switch.is-on & {
+		transform: translateX(12px);
+	}
+}
+
+/* Inline confirm — destructive variant of card-row --------------------- */
+
+.wpd-card-row.is-destructive {
+	&:hover {
+		border-color: var(--wpds-color-stroke-interactive-error, #c53030);
+	}
+
+	.wpd-card__main:hover:not([disabled]) {
+		color: var(--wpds-color-fg-interactive-error, #c53030);
+
+		.wpd-card__icon {
+			color: inherit;
+		}
+	}
+}
+
+.wpd-confirm-pill {
+	align-self: center;
+	margin-right: 10px;
+}
+
+/* New-content menu — plain collapsible, mirrors the devtools pattern --- */
+
+.wpd-newcontent {
+	border-top: 1px solid var(--wpd-border);
+}
+
+.wpd-newcontent__trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 12px var(--wpd-pad-x);
+	border: 0;
+	background: transparent;
+	color: var(--wpd-ink);
+	font: inherit;
+	font-weight: 500;
+	text-align: left;
+	cursor: pointer;
+
+	&:hover {
+		background: var(--wpd-hover);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
+	}
+}
+
+.wpd-newcontent__label-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	color: var(--wpd-ink);
+}
+
+.wpd-newcontent__chevron {
+	display: inline-grid;
+	place-items: center;
+	color: var(--wpd-ink-muted);
+	transition: transform 0.15s ease-out;
+
+	&.is-open {
+		transform: rotate(180deg);
+	}
+}
+
+.wpd-newcontent__items {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpd-gap);
+	padding: 0 var(--wpd-pad-x) 12px;
+}
+
+/* Plugin actions — same collapsible shape as NewContent, different intent */
+
+.wpd-plugins {
+	border-top: 1px solid var(--wpd-border);
+}
+
+.wpd-plugins__trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 12px var(--wpd-pad-x);
+	border: 0;
+	background: transparent;
+	color: var(--wpd-ink);
+	font: inherit;
+	font-weight: 500;
+	text-align: left;
+	cursor: pointer;
+
+	&:hover {
+		background: var(--wpd-hover);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
+	}
+}
+
+.wpd-plugins__label-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	color: var(--wpd-ink);
+}
+
+.wpd-plugins__count {
+	display: inline-grid;
+	place-items: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 9px;
+	background: var(--wpd-border);
+	color: var(--wpd-ink-dim);
+	font-size: 10px;
+	font-weight: 500;
+	letter-spacing: 0;
+}
+
+.wpd-plugins__chevron {
+	display: inline-grid;
+	place-items: center;
+	color: var(--wpd-ink-muted);
+	transition: transform 0.15s ease-out;
+
+	&.is-open {
+		transform: rotate(180deg);
+	}
+}
+
+.wpd-plugins__items {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpd-gap);
+	padding: 0 var(--wpd-pad-x) 12px;
+}
+
+/* Nested plugin group — an item that has its own submenu. Rendered as a
+ * card-shaped trigger that expands to reveal indented children. */
+.wpd-plugin-group {
+	background: var(--wpd-surface);
+	border: 1px solid var(--wpd-border);
+	border-radius: var(--wpd-radius);
+	overflow: hidden;
+	transition: border-color 0.12s;
+
+	&:hover {
+		border-color: var(--wpd-border-strong);
+	}
+}
+
+.wpd-plugin-group__trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 10px 12px;
+	border: 0;
+	background: transparent;
+	color: var(--wpd-ink);
+	font: inherit;
+	font-weight: 500;
+	text-align: left;
+	cursor: pointer;
+
+	&:hover {
+		background: var(--wpd-hover);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
+	}
+}
+
+.wpd-plugin-group__label-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+	flex: 1;
+}
+
+.wpd-plugin-group__label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wpd-plugin-group__chevron {
+	display: inline-grid;
+	place-items: center;
+	color: var(--wpd-ink-muted);
+	transition: transform 0.15s ease-out;
+	flex-shrink: 0;
+
+	&.is-open {
+		transform: rotate(180deg);
+	}
+}
+
+.wpd-plugin-group__panel {
+	border-top: 1px solid var(--wpd-border);
+}
+
+.wpd-plugin-group__items {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpd-gap);
+	padding: 8px 8px 10px;
+}
+
+/* Developer tools — plain collapsible (not a card) --------------------- */
+
+.wpd-devtools {
+	border-top: 1px solid var(--wpd-border);
+	/* The section above already sets its own bottom padding; the divider
+	 * sits flush against it so the devtools row feels like a continuation,
+	 * not a new block with extra air. */
+}
+
+.wpd-devtools__trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 10px var(--wpd-pad-x);
+	border: 0;
+	background: transparent;
+	color: var(--wpd-ink-dim);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+
+	&:hover {
+		color: var(--wpd-ink);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
+	}
+}
+
+.wpd-devtools__label {
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.wpd-devtools__chevron {
+	display: inline-grid;
+	place-items: center;
+	color: var(--wpd-ink-muted);
+	transition: transform 0.15s ease-out;
+
+	&.is-open {
+		transform: rotate(180deg);
+	}
+}
+
+.wpd-devtools__items {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpd-gap);
+	padding: 0 var(--wpd-pad-x) 14px;
+}
+
+/* Info row (admin bar disabled hint) ----------------------------------- */
+
+.wpd-info-row {
+	padding: 12px 14px;
+	background: var(--wpds-color-bg-surface-info-weak, rgba(34, 113, 177, 0.08));
+	border: 1px solid var(--wpd-border);
+	border-radius: var(--wpd-radius);
+	font-size: 12px;
+	color: var(--wpd-ink-dim);
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.wpd-info-row__link {
+	color: var(--wpd-accent);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	font: inherit;
+	align-self: flex-start;
+
+	&:hover {
+		text-decoration: underline;
+	}
+}
+
+/* Status badges (updates, comments — clickable) ------------------------ */
+
+.wpd-header__status {
+	margin-top: 8px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.wpd-status-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.wpd-status-badge__icon {
+	display: inline-grid;
+	place-items: center;
+	width: 12px;
+	height: 12px;
+	flex-shrink: 0;
+
+	svg {
+		width: 12px;
+		height: 12px;
+		fill: currentColor;
+	}
+}
+
+.wpd-status-badge-btn {
+	appearance: none;
+	border: 0;
+	background: none;
+	padding: 0;
+	cursor: pointer;
+	/* @wordpress/ui Badge has rounded corners — match them on the focus ring. */
+	border-radius: 999px;
+
+	&:hover .wpd-status-badge {
+		filter: brightness(0.96);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: 2px;
+	}
+}
+
+/* Host badge (logo + name) --------------------------------------------- */
+
+.wpd-host-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.wpd-host-badge__mark {
+	display: inline-grid;
+	place-items: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 3px;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1;
+	flex-shrink: 0;
+
+	&.wpd-host-badge__mark--wp {
+		background: #3858e9;
+		color: #fff;
+
+		svg {
+			width: 12px;
+			height: 12px;
+			fill: currentColor;
+		}
+	}
+}
+
+/* Empty states ---------------------------------------------------------- */
+
+.wpd-empty {
+	padding: 28px var(--wpd-pad-x) 32px;
+	background: var(--wpd-surface);
+	margin: 0 auto;
+}
+
+/* Loading & empty states ----------------------------------------------- */
+
+.wpd-loading {
+	padding: 48px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--wpd-surface);
+}
+
+.wpd-loading__dot {
+	width: 10px;
+	height: 10px;
+	background: var(--wpd-accent);
+	border-radius: 50%;
+	animation: wpd-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes wpd-pulse {
+	0%,
+	100% {
+		opacity: 0.3;
+		transform: scale(0.8);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1.15);
+	}
+}

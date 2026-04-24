@@ -2,3 +2,6 @@ node_modules/
 package-lock.json
 CLAUDE.md
 .claude/
+.DS_Store
+# preview harness is a dev-only artifact — rebuild locally with npm run build
+dist/preview.*

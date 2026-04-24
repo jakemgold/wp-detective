@@ -1,0 +1,256 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+	pencil,
+	seen,
+	globe,
+	dashboard,
+	key,
+	keyboardReturn,
+	login,
+} from '@wordpress/icons';
+import { Header } from './Header';
+import { ActionRow } from './ActionRow';
+import { AdminBarToggle } from './AdminBarToggle';
+import { DevTools } from './DevTools';
+import { NewContent } from './NewContent';
+import { PluginActions } from './PluginActions';
+import { InlineConfirm } from './InlineConfirm';
+import { usePrefs } from '../hooks/usePrefs';
+import { runAction, applyAdminBarPref, requestRestEditUrl } from '../lib/actions';
+import { editLabel, editDisabledLabel, postTypeLabel } from '../lib/labels';
+
+export function DetectedView({ result, host }) {
+	const { detection, origin, url } = result;
+	const ctx = detection.context || {};
+	const isLoggedIn = !!ctx.isLoggedIn;
+	const hostname = useMemo(() => new URL(origin).hostname, [origin]);
+	const isWpAdmin = useMemo(() => /\/wp-admin(\/|$)/.test(new URL(url).pathname), [url]);
+
+	const openInNewTab = (url) => {
+		chrome.tabs.create({ url });
+		window.close();
+	};
+
+	const openUrl = (url, newTab = false) => {
+		if (newTab) chrome.tabs.create({ url });
+		else chrome.tabs.update({ url });
+		window.close();
+	};
+
+	return (
+		<>
+			<Header
+				hostname={hostname}
+				host={host}
+				wpVersion={ctx.generatorVersion || null}
+				loggedIn={isLoggedIn}
+				origin={origin}
+				updateCount={ctx.updateCount || null}
+				commentCount={ctx.commentCount || null}
+				onOpen={openInNewTab}
+			/>
+			<Section>
+				{isLoggedIn ? (
+					isWpAdmin ? (
+						<WpAdminActions ctx={ctx} origin={origin} url={url} />
+					) : (
+						<FrontendLoggedInActions ctx={ctx} origin={origin} url={url} />
+					)
+				) : (
+					<LoggedOutActions origin={origin} url={url} />
+				)}
+
+				{isLoggedIn && (
+					<InlineConfirm
+						icon={login}
+						label="Sign out"
+						onConfirm={() => runAction('signout', { origin, url })}
+						destructive
+					/>
+				)}
+			</Section>
+			{isLoggedIn && ctx.newContentItems?.length > 0 && (
+				<NewContent items={ctx.newContentItems} onOpen={openUrl} />
+			)}
+			{isLoggedIn && ctx.pluginMenuItems?.length > 0 && (
+				<PluginActions items={ctx.pluginMenuItems} onOpen={openUrl} />
+			)}
+			{!isWpAdmin && (
+				<DevTools origin={origin} url={url} hasQueryMonitor={!!ctx.hasQueryMonitor} />
+			)}
+		</>
+	);
+}
+
+function Section({ children }) {
+	return (
+		<div className="wpd-section">
+			<div className="wpd-section__items">{children}</div>
+		</div>
+	);
+}
+
+function WpAdminActions({ ctx, origin, url }) {
+	// If the admin bar has a view/preview link, the user is on an edit screen.
+	// WordPress provides the correct URL — including the preview nonce for
+	// drafts — so we use it directly.
+	const viewHrefSafe = (() => {
+		if (!ctx.adminBarViewHref) return null;
+		try {
+			return new URL(ctx.adminBarViewHref).origin === origin ? ctx.adminBarViewHref : null;
+		} catch (_) {
+			return null;
+		}
+	})();
+
+	const typeLabel = ctx.postType ? postTypeLabel(ctx.postType) : 'Page';
+	const verb = ctx.postStatus === 'publish' ? 'View' : 'Preview';
+
+	return (
+		<>
+			{viewHrefSafe && (
+				<ActionRow
+					icon={seen}
+					label={`${verb} this ${typeLabel}`}
+					onClick={() => runAction('view-post', { origin, url, viewUrl: viewHrefSafe })}
+					onNewTab={() =>
+						runAction('view-post', { origin, url, viewUrl: viewHrefSafe, newTab: true })
+					}
+					copyUrl={viewHrefSafe}
+				/>
+			)}
+			<ActionRow
+				icon={globe}
+				label="Visit site"
+				onClick={() => runAction('visit-site', { origin, url })}
+				onNewTab={() => runAction('visit-site', { origin, url, newTab: true })}
+			/>
+			<ActionRow
+				icon={dashboard}
+				label="WordPress Admin"
+				onClick={() => runAction('admin', { origin, url })}
+				onNewTab={() => runAction('admin', { origin, url, newTab: true })}
+			/>
+		</>
+	);
+}
+
+function FrontendLoggedInActions({ ctx, origin, url }) {
+	const [prefs, savePref] = usePrefs(origin);
+	const { editUrl, resolving } = useEditUrlResolution(ctx, origin);
+
+	const isMac = typeof navigator !== 'undefined' && navigator.platform?.startsWith('Mac');
+	const shortcutHint = isMac ? 'Alt⇧E' : 'Alt+Shift+E';
+
+	const toggleAdminBar = async (show) => {
+		const hidden = !show;
+		await savePref('adminBarHidden', hidden);
+		await applyAdminBarPref(hidden);
+	};
+
+	const editActionEnabled = !!editUrl;
+	const editActionLabel = editActionEnabled
+		? editLabel(ctx, true)
+		: resolving
+			? editLabel(ctx, true)
+			: editDisabledLabel(ctx);
+
+	return (
+		<>
+			<ActionRow
+				icon={pencil}
+				label={editActionLabel}
+				hint={resolving ? null : shortcutHint}
+				loading={resolving}
+				disabled={!editActionEnabled}
+				onClick={() => runAction('edit', { origin, url, editUrl })}
+				onNewTab={() => runAction('edit', { origin, url, editUrl, newTab: true })}
+				copyUrl={editActionEnabled ? editUrl : null}
+			/>
+			<ActionRow
+				icon={dashboard}
+				label="WordPress Admin"
+				onClick={() => runAction('admin', { origin, url })}
+				onNewTab={() => runAction('admin', { origin, url, newTab: true })}
+			/>
+			<AdminBarSection ctx={ctx} origin={origin} prefs={prefs} onToggle={toggleAdminBar} />
+		</>
+	);
+}
+
+function AdminBarSection({ ctx, origin, prefs, onToggle }) {
+	if (!ctx.hasAdminBar) {
+		return (
+			<div className="wpd-info-row">
+				<span>Toolbar disabled in WordPress.</span>
+				<button
+					type="button"
+					className="wpd-info-row__link"
+					onClick={() => runAction('profile', { origin, url: '' })}
+				>
+					Change in profile →
+				</button>
+			</div>
+		);
+	}
+	return <AdminBarToggle checked={!prefs.adminBarHidden} onChange={onToggle} />;
+}
+
+function LoggedOutActions({ origin, url }) {
+	return (
+		<>
+			<ActionRow
+				icon={key}
+				label="Admin login"
+				onClick={() => runAction('login', { origin, url })}
+				onNewTab={() => runAction('login', { origin, url, newTab: true })}
+			/>
+			<ActionRow
+				icon={keyboardReturn}
+				label="Admin login, return to page"
+				onClick={() => runAction('login-return', { origin, url })}
+				onNewTab={() => runAction('login-return', { origin, url, newTab: true })}
+			/>
+		</>
+	);
+}
+
+/**
+ * Two-tier resolution: synchronous first (instant), then REST if the ctx has
+ * slugs we can look up. While REST is in flight we expose `resolving: true`
+ * so the UI can show a loading state.
+ */
+function useEditUrlResolution(ctx, origin) {
+	const syncUrl = useMemo(() => {
+		const wpRest = typeof window !== 'undefined' ? window.WPRest : null;
+		return wpRest ? wpRest.resolveEditUrlSync(ctx, origin) : null;
+	}, [ctx, origin]);
+
+	const canResolveAsync = useMemo(() => {
+		const wpRest = typeof window !== 'undefined' ? window.WPRest : null;
+		return wpRest ? wpRest.canResolveViaRest(ctx) : false;
+	}, [ctx]);
+
+	const [asyncUrl, setAsyncUrl] = useState(null);
+	const [asyncAttempted, setAsyncAttempted] = useState(false);
+	const needsAsync = !syncUrl && canResolveAsync;
+
+	useEffect(() => {
+		if (!needsAsync || asyncAttempted) return;
+		let cancelled = false;
+		(async () => {
+			const resolved = await requestRestEditUrl();
+			if (cancelled) return;
+			setAsyncUrl(resolved);
+			setAsyncAttempted(true);
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [needsAsync, asyncAttempted]);
+
+	return {
+		editUrl: syncUrl || asyncUrl || null,
+		resolving: needsAsync && !asyncAttempted,
+	};
+}

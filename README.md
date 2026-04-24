@@ -29,7 +29,15 @@ A Chrome extension (Safari coming soon) that detects WordPress sites and puts ad
 
 ## Development
 
-Vanilla JS — no build step, no framework. Run tests with `cd test && npm install && npm test`.
+The popup UI is React + [`@wordpress/ui`](https://www.npmjs.com/package/@wordpress/ui), bundled with [10up-toolkit](https://github.com/10up/10up-toolkit). The background service worker, content scripts, and `lib/*.js` are still vanilla — no build step there.
+
+```
+npm install
+npm run build     # production bundle → dist/
+npm start         # watch mode
+```
+
+Run smoke tests for `lib/` with `cd test && npm install && npm test`.
 
 ## License
 
