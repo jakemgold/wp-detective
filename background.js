@@ -173,7 +173,12 @@ chrome.commands.onCommand.addListener(async (command) => {
   // Try sync resolution first (covers most cases).
   // resolveEditUrlSync isn't available here (it's in lib/rest.js, loaded
   // only in content scripts), so we inline the priority logic.
-  let editUrl = ctx.adminBarEditHref || null;
+  let editUrl = null;
+  if (ctx.adminBarEditHref) {
+    try {
+      if (new URL(ctx.adminBarEditHref).origin === origin) editUrl = ctx.adminBarEditHref;
+    } catch (_) { /* malformed href — ignore */ }
+  }
 
   if (!editUrl && ctx.postId && ctx.pageType === 'single') {
     editUrl = `${origin}/wp-admin/post.php?post=${ctx.postId}&action=edit`;

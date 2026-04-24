@@ -140,7 +140,9 @@ function renderDetected(result, prefs, host) {
       // If the admin bar has a view/preview link, the user is on an
       // edit screen. WordPress provides the correct URL — including the
       // preview nonce for drafts — so we use it directly.
-      if (ctx.adminBarViewHref) {
+      const viewHrefSafe = ctx.adminBarViewHref &&
+        (() => { try { return new URL(ctx.adminBarViewHref).origin === origin; } catch (_) { return false; } })();
+      if (viewHrefSafe) {
         const typeLabel = ctx.postType ? postTypeLabel(ctx.postType) : 'Page';
         const verb = ctx.postStatus === 'publish' ? 'View' : 'Preview';
         html += actionRow({
