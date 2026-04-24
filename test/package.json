@@ -1,0 +1,12 @@
+{
+  "name": "wp-detective-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Smoke tests for lib/detect.js and lib/rest.js",
+  "scripts": {
+    "test": "node smoke.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
