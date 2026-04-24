@@ -463,6 +463,219 @@ body {
 	color: var(--wpd-ink);
 }
 
+/* Site info — collapsible, mirrors the new-content chrome but the body
+ * contains display rows (theme, plugins) rather than action cards.
+ * ---------------------------------------------------------------------- */
+
+.wpd-siteinfo {
+	border-top: 1px solid var(--wpd-border);
+}
+
+.wpd-siteinfo__trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 12px var(--wpd-pad-x);
+	border: 0;
+	background: transparent;
+	color: var(--wpd-ink);
+	font: inherit;
+	font-weight: 500;
+	text-align: left;
+	cursor: pointer;
+
+	&:hover {
+		background: var(--wpd-hover);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
+	}
+}
+
+.wpd-siteinfo__label-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	color: var(--wpd-ink);
+}
+
+.wpd-siteinfo__chevron {
+	display: inline-grid;
+	place-items: center;
+	color: var(--wpd-ink-muted);
+	transition: transform 0.15s ease-out;
+
+	&.is-open {
+		transform: rotate(180deg);
+	}
+}
+
+.wpd-siteinfo__panel {
+	border-top: 1px solid var(--wpd-border);
+}
+
+.wpd-siteinfo__body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding: 10px var(--wpd-pad-x) 14px;
+}
+
+.wpd-siteinfo__summary {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 12px;
+	background: var(--wpd-surface);
+	border: 1px solid var(--wpd-border);
+	border-radius: var(--wpd-radius);
+}
+
+.wpd-siteinfo__site-name {
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--wpd-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wpd-siteinfo__site-desc {
+	font-size: 12px;
+	color: var(--wpd-ink-dim);
+	line-height: 1.35;
+}
+
+.wpd-siteinfo__group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.wpd-siteinfo__group-label {
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wpd-ink-dim);
+	padding: 0 2px;
+}
+
+.wpd-siteinfo__group-items {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.wpd-siteinfo__row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	background: var(--wpd-surface);
+	border: 1px solid var(--wpd-border);
+	border-radius: var(--wpd-radius-sm);
+	transition: border-color 0.12s;
+
+	&:hover {
+		border-color: var(--wpd-border-strong);
+	}
+}
+
+.wpd-siteinfo__row-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.wpd-siteinfo__row-title {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	flex-wrap: wrap;
+	font-weight: 500;
+	font-size: 12.5px;
+	color: var(--wpd-ink);
+	overflow: hidden;
+}
+
+.wpd-siteinfo__row-version {
+	font-family: var(--wpds-typography-font-family-mono, ui-monospace, "SF Mono", monospace);
+	font-size: 10.5px;
+	font-weight: 400;
+	color: var(--wpd-ink-muted);
+	letter-spacing: 0;
+}
+
+.wpd-siteinfo__row-tag {
+	font-size: 10px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: var(--wpd-border);
+	color: var(--wpd-ink-dim);
+}
+
+.wpd-siteinfo__row-sub {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+	color: var(--wpd-ink-dim);
+
+	code {
+		font-family: var(--wpds-typography-font-family-mono, ui-monospace, "SF Mono", monospace);
+		font-size: 10.5px;
+		color: var(--wpd-ink-muted);
+		background: transparent;
+		padding: 0;
+	}
+}
+
+.wpd-siteinfo__row-aux {
+	flex-shrink: 0;
+	width: 26px;
+	height: 26px;
+	border: 0;
+	background: transparent;
+	color: var(--wpd-ink-dim);
+	border-radius: var(--wpd-radius-sm);
+	cursor: pointer;
+	display: grid;
+	place-items: center;
+	transition: color 0.1s, background-color 0.1s;
+
+	&:hover {
+		background: var(--wpd-hover);
+		color: var(--wpd-accent);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
+	}
+
+	svg {
+		width: 14px;
+		height: 14px;
+	}
+}
+
+.wpd-siteinfo__hint {
+	margin: 0;
+	padding: 0 2px;
+	font-size: 11px;
+	color: var(--wpd-ink-muted);
+	font-style: italic;
+}
+
 .wpd-devtools__chevron {
 	display: inline-grid;
 	place-items: center;

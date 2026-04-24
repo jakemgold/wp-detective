@@ -133,11 +133,71 @@
     return false;
   }
 
+  /**
+   * Public site-info endpoint (/wp-json/). Returns name, description, url,
+   * home, gmt_offset, timezone_string, namespaces, site_logo, site_icon_url.
+   * Works without authentication — most useful fact is `namespaces`, which
+   * reveals plugins that register their own REST routes (wc/v3, yoast/v1,
+   * contact-form-7/v1, etc.) even when DOM scanning misses them.
+   */
+  async function fetchSiteInfo({ restApiRoot, origin, fetchImpl = fetch }) {
+    const root = normalizeRoot(restApiRoot, origin);
+    try {
+      const res = await fetchImpl(root, { credentials: 'include' });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Active theme — requires edit_theme_options capability (admins have it).
+   * The collection endpoint returns an array; `?status=active` filters to
+   * the one currently serving the site. Returns the first entry or null.
+   */
+  async function fetchActiveTheme({ restApiRoot, origin, fetchImpl = fetch }) {
+    const root = normalizeRoot(restApiRoot, origin);
+    try {
+      const res = await fetchImpl(`${root}wp/v2/themes?status=active`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) return null;
+      return data[0];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Full plugin list — requires activate_plugins capability (admins have it).
+   * Returns an array of plugin objects with { plugin, name, version, author,
+   * status, plugin_uri, ... } or null when unauthorized / REST is disabled.
+   */
+  async function fetchPluginsDetail({ restApiRoot, origin, fetchImpl = fetch }) {
+    const root = normalizeRoot(restApiRoot, origin);
+    try {
+      const res = await fetchImpl(`${root}wp/v2/plugins`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return Array.isArray(data) ? data : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   globalThis.WPRest = {
     fetchTermId,
     fetchAuthorId,
     resolveEditUrlSync,
     resolveEditUrlAsync,
     canResolveViaRest,
+    fetchSiteInfo,
+    fetchActiveTheme,
+    fetchPluginsDetail,
   };
 })();

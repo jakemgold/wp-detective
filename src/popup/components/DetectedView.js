@@ -14,6 +14,7 @@ import { ToggleRow } from './ToggleRow';
 import { DevTools } from './DevTools';
 import { NewContent } from './NewContent';
 import { InlineConfirm } from './InlineConfirm';
+import { SiteInfoPanel } from './SiteInfoPanel';
 import { usePrefs } from '../hooks/usePrefs';
 import { runAction, applyAdminBarPref, requestRestEditUrl } from '../lib/actions';
 import { editLabel, editDisabledLabel, postTypeLabel } from '../lib/labels';
@@ -71,6 +72,7 @@ export function DetectedView({ result, host }) {
 			{isLoggedIn && ctx.newContentItems?.length > 0 && (
 				<NewContent items={ctx.newContentItems} onOpen={openUrl} />
 			)}
+			<SiteInfoPanel ctx={ctx} origin={origin} onOpen={openUrl} />
 			{!isWpAdmin && (
 				<DevTools origin={origin} url={url} hasQueryMonitor={!!ctx.hasQueryMonitor} qmOpen={!!ctx.qmOpen} />
 			)}

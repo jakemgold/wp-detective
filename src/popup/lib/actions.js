@@ -129,6 +129,16 @@ export async function requestRestEditUrl() {
 	}
 }
 
+export async function requestSiteInfo() {
+	try {
+		const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+		const res = await chrome.tabs.sendMessage(tab.id, { type: 'GET_SITE_INFO' });
+		return res || null;
+	} catch (_) {
+		return null;
+	}
+}
+
 export async function toggleQueryMonitor() {
 	try {
 		const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

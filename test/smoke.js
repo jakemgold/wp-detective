@@ -263,6 +263,66 @@ async function main() {
       'no host from generic nginx headers');
   }
 
+  // --- 13. Theme + plugin slugs from asset paths ------------------------
+  {
+    console.log('\n[13] Theme + plugin slug extraction');
+    const dom = new JSDOM(`
+      <html><head>
+        <link rel="https://api.w.org/" href="https://example.com/wp-json/">
+        <link rel="stylesheet" href="/wp-content/themes/twentytwentyfour/style.css">
+        <link rel="stylesheet" href="/wp-content/plugins/woocommerce/assets/css/woocommerce.css">
+        <script src="/wp-content/plugins/akismet/akismet.js"></script>
+        <script src="/wp-content/mu-plugins/vip-helpers/loader.js"></script>
+        <script src="/wp-content/plugins/woocommerce/assets/js/cart.js"></script>
+      </head><body></body></html>
+    `);
+    const ctx = loadModules(dom);
+    const det = ctx.WPDetect.detectWordPress(ctx.document);
+    assert(det.context.themeSlug === 'twentytwentyfour',
+      `themeSlug=twentytwentyfour (got ${det.context.themeSlug})`);
+    assert(det.context.pluginSlugs.length === 3,
+      `3 plugin slugs (got ${det.context.pluginSlugs.length})`);
+    assert(det.context.pluginSlugs.includes('woocommerce'),
+      'woocommerce slug detected');
+    assert(det.context.pluginSlugs.includes('akismet'),
+      'akismet slug detected');
+    assert(det.context.pluginSlugs.includes('vip-helpers'),
+      'vip-helpers from mu-plugins');
+    // De-dupe: woocommerce appears twice in the DOM but only once in slugs.
+    const wc = det.context.pluginSlugs.filter((s) => s === 'woocommerce');
+    assert(wc.length === 1, 'duplicates collapsed');
+  }
+
+  // --- 14. REST site-info helper returns parsed JSON --------------------
+  {
+    console.log('\n[14] REST site-info helper');
+    const dom = new JSDOM(`<html><body></body></html>`);
+    const ctx = loadModules(dom);
+
+    const fakeFetch = async (url) => ({
+      ok: true,
+      json: async () => ({
+        name: 'Example', description: 'Just an example',
+        namespaces: ['wp/v2', 'wc/v3', 'yoast/v1'],
+      }),
+    });
+    const out = await ctx.WPRest.fetchSiteInfo({
+      restApiRoot: 'https://example.com/wp-json/',
+      origin: 'https://example.com',
+      fetchImpl: fakeFetch,
+    });
+    assert(out && out.name === 'Example', 'site name parsed');
+    assert(out.namespaces.includes('wc/v3'), 'namespaces surfaced');
+
+    const failFetch = async () => ({ ok: false, json: async () => ({}) });
+    const none = await ctx.WPRest.fetchSiteInfo({
+      restApiRoot: 'https://example.com/wp-json/',
+      origin: 'https://example.com',
+      fetchImpl: failFetch,
+    });
+    assert(none === null, 'returns null on !ok response');
+  }
+
   // --- 12. Not a WordPress site -----------------------------------------
   {
     console.log('\n[12] Non-WordPress page');

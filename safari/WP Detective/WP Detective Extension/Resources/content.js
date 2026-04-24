@@ -185,6 +185,28 @@
       return true;
     }
 
+    if (msg.type === 'GET_SITE_INFO') {
+      // Runs from the page context, so cookies flow automatically and
+      // logged-in users get authenticated (non-public) endpoint data.
+      // All three calls are independent — fire them in parallel so the
+      // popup only waits for the slowest.
+      const ctx = detection.context;
+      Promise.all([
+        globalThis.WPRest.fetchSiteInfo({
+          restApiRoot: ctx.restApiRoot, origin: location.origin,
+        }),
+        globalThis.WPRest.fetchActiveTheme({
+          restApiRoot: ctx.restApiRoot, origin: location.origin,
+        }),
+        globalThis.WPRest.fetchPluginsDetail({
+          restApiRoot: ctx.restApiRoot, origin: location.origin,
+        }),
+      ]).then(([siteInfo, activeTheme, plugins]) => {
+        sendResponse({ siteInfo, activeTheme, plugins });
+      }).catch(() => sendResponse({ siteInfo: null, activeTheme: null, plugins: null }));
+      return true;
+    }
+
     if (msg.type === 'TOGGLE_QUERY_MONITOR') {
       // QM toggles its main panel via a click on the admin-bar link, OR
       // directly via the `.qm-show` class on #query-monitor-main. The
