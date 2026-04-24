@@ -13,9 +13,10 @@ A Chrome extension (Safari coming soon) that detects WordPress sites and puts ad
 
 ## Install
 
-1. Clone this repo
-2. Open `chrome://extensions`, enable **Developer mode**
-3. Click **Load unpacked** and select the repo folder
+1. Download the latest zip from [Releases](https://github.com/jakemgold/wp-detective/releases)
+2. Unzip to a folder
+3. Open `chrome://extensions`, enable **Developer mode**
+4. Click **Load unpacked** and select the unzipped folder
 
 ## Features
 
