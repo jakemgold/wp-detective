@@ -132,7 +132,57 @@ export async function requestRestEditUrl() {
 export async function requestSiteInfo() {
 	try {
 		const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-		const res = await chrome.tabs.sendMessage(tab.id, { type: 'GET_SITE_INFO' });
+		// WP's authenticated REST endpoints require X-WP-Nonce even with
+		// cookies. The nonce lives in several places depending on which
+		// scripts WP enqueued on the page; we look in all of them. Has to
+		// run in MAIN world — content scripts can't see page globals.
+		let nonce = null;
+		try {
+			const [out] = await chrome.scripting.executeScript({
+				target: { tabId: tab.id },
+				world: 'MAIN',
+				func: () => {
+					if (window.wpApiSettings?.nonce) return window.wpApiSettings.nonce;
+					if (window._wpApiSettings?.nonce) return window._wpApiSettings.nonce;
+					if (window.wp?.apiFetch?.nonceMiddleware?.nonce) return window.wp.apiFetch.nonceMiddleware.nonce;
+					// Inline script content — many WP setups print the nonce
+					// in a script tag without exposing it on a global.
+					for (const s of document.querySelectorAll('script:not([src])')) {
+						const t = s.textContent || '';
+						const m = t.match(/(?:wpApiSettings|_wpApiSettings)\s*=\s*\{[^}]*"nonce"\s*:\s*"([a-f0-9]+)"/)
+							|| t.match(/wp\.api\.fetch\.use\(\s*wp\.api\.fetch\.createNonceMiddleware\(\s*"([a-f0-9]+)"/);
+						if (m) return m[1];
+					}
+					// data-* attribute scan — Gutenberg + some plugins emit
+					// `data-rest-nonce`/`data-wp-nonce` on root elements.
+					const el = document.querySelector('[data-rest-nonce], [data-wp-nonce], [data-nonce]');
+					return el?.getAttribute('data-rest-nonce')
+						|| el?.getAttribute('data-wp-nonce')
+						|| el?.getAttribute('data-nonce')
+						|| null;
+				},
+			});
+			nonce = out?.result || null;
+		} catch (_) { /* page disallows scripting */ }
+
+		// If the current page didn't expose a nonce, fetch /wp-admin/profile.php
+		// — admin pages reliably enqueue wp-api so the inline script with the
+		// nonce is in the response. Lighter than the full dashboard.
+		if (!nonce) {
+			try {
+				const origin = new URL(tab.url).origin;
+				const res = await fetch(`${origin}/wp-admin/profile.php`, {
+					credentials: 'include',
+					redirect: 'follow',
+				});
+				if (res.ok) {
+					const html = await res.text();
+					const m = html.match(/(?:wpApiSettings|_wpApiSettings)\s*=\s*\{[^}]*"nonce"\s*:\s*"([a-f0-9]+)"/);
+					if (m) nonce = m[1];
+				}
+			} catch (_) { /* admin fetch failed — give up, will pass null */ }
+		}
+		const res = await chrome.tabs.sendMessage(tab.id, { type: 'GET_SITE_INFO', nonce });
 		return res || null;
 	} catch (_) {
 		return null;

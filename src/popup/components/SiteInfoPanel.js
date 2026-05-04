@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Collapsible, Icon } from '@wordpress/ui';
-import { chevronDown, info as infoIcon, external } from '@wordpress/icons';
+import { chevronDown, info as infoIcon } from '@wordpress/icons';
 import { requestSiteInfo } from '../lib/actions';
 
 /**
@@ -51,8 +51,7 @@ export function SiteInfoPanel({ ctx, origin, onOpen }) {
 		[themeSlug, activeTheme],
 	);
 
-	const hasAnything =
-		!!themeInfo || pluginRows.length > 0 || !!siteInfo?.name || !!siteInfo?.description;
+	const hasAnything = !!themeInfo || pluginRows.length > 0;
 
 	if (!hasAnything && !ctx.restApiRoot) return null;
 
@@ -61,7 +60,7 @@ export function SiteInfoPanel({ ctx, origin, onOpen }) {
 			<Collapsible.Trigger className="wpd-siteinfo__trigger">
 				<span className="wpd-siteinfo__label-group">
 					<Icon icon={infoIcon} size={16} />
-					<span className="wpd-siteinfo__label">Site info</span>
+					<span className="wpd-siteinfo__label">Site Information</span>
 				</span>
 				<span
 					className={`wpd-siteinfo__chevron ${open ? 'is-open' : ''}`}
@@ -72,13 +71,9 @@ export function SiteInfoPanel({ ctx, origin, onOpen }) {
 			</Collapsible.Trigger>
 			<Collapsible.Panel className="wpd-siteinfo__panel">
 				<div className="wpd-siteinfo__body">
-					{siteInfo && (siteInfo.name || siteInfo.description) && (
-						<SiteSummary siteInfo={siteInfo} />
-					)}
-
 					{themeInfo && (
 						<InfoGroup label="Active theme">
-							<ThemeCard theme={themeInfo} origin={origin} onOpen={onOpen} />
+							<ThemeRow theme={themeInfo} origin={origin} onOpen={onOpen} />
 						</InfoGroup>
 					)}
 
@@ -95,12 +90,16 @@ export function SiteInfoPanel({ ctx, origin, onOpen }) {
 							{loading && pluginRows.length === 0 && (
 								<p className="wpd-siteinfo__hint">Loading…</p>
 							)}
-							{pluginRows.map((p) => (
-								<PluginRow key={p.slug} plugin={p} origin={origin} onOpen={onOpen} />
-							))}
+							{pluginRows.length > 0 && (
+								<div className="wpd-siteinfo__pills">
+									{pluginRows.map((p) => (
+										<PluginPill key={p.slug} plugin={p} onOpen={onOpen} />
+									))}
+								</div>
+							)}
 							{!loading && attempted && !plugins && pluginRows.length > 0 && (
 								<p className="wpd-siteinfo__hint">
-									Sign in as an admin to see plugin names and versions.
+									Log in for a comprehensive list of plugins with additional information.
 								</p>
 							)}
 						</InfoGroup>
@@ -115,17 +114,6 @@ export function SiteInfoPanel({ ctx, origin, onOpen }) {
 	);
 }
 
-function SiteSummary({ siteInfo }) {
-	return (
-		<div className="wpd-siteinfo__summary">
-			{siteInfo.name && <div className="wpd-siteinfo__site-name">{siteInfo.name}</div>}
-			{siteInfo.description && (
-				<div className="wpd-siteinfo__site-desc">{siteInfo.description}</div>
-			)}
-		</div>
-	);
-}
-
 function InfoGroup({ label, children }) {
 	return (
 		<div className="wpd-siteinfo__group">
@@ -135,62 +123,65 @@ function InfoGroup({ label, children }) {
 	);
 }
 
-function ThemeCard({ theme, origin, onOpen }) {
-	const editHref = `${origin}/wp-admin/themes.php`;
-	return (
-		<div className="wpd-siteinfo__row">
-			<div className="wpd-siteinfo__row-main">
-				<div className="wpd-siteinfo__row-title">
-					{theme.name}
-					{theme.version && (
-						<span className="wpd-siteinfo__row-version">{theme.version}</span>
-					)}
-				</div>
-				<div className="wpd-siteinfo__row-sub">
-					{theme.slug && <code>{theme.slug}</code>}
-					{theme.author && <span>by {stripTags(theme.author)}</span>}
-				</div>
+function ThemeRow({ theme, origin, onOpen }) {
+	// hasRestDetail correlates with admin login — the REST themes endpoint
+	// requires edit_theme_options, which only admins have. So this is also
+	// our signal for "is the row actionable."
+	const hasRestDetail = !!(theme.version || theme.author);
+	const tooltip = theme.version ? `${theme.name} ${theme.version}` : theme.name;
+	const body = (
+		<div className="wpd-siteinfo__row-main">
+			<div className="wpd-siteinfo__row-title">
+				{theme.name}
+				{theme.version && (
+					<span className="wpd-siteinfo__row-version">{theme.version}</span>
+				)}
 			</div>
-			<button
-				type="button"
-				className="wpd-siteinfo__row-aux"
-				onClick={() => onOpen(editHref, true)}
-				title="Open Themes"
-				aria-label="Open Themes"
-			>
-				<Icon icon={external} size={14} />
-			</button>
+			<div className="wpd-siteinfo__row-sub">
+				{hasRestDetail ? (
+					<>
+						{theme.slug && <code>{theme.slug}</code>}
+						{theme.author && <span>by {stripTags(theme.author)}</span>}
+					</>
+				) : (
+					<span>Log in for additional information.</span>
+				)}
+			</div>
 		</div>
+	);
+	if (!hasRestDetail) {
+		// No useful destination when logged out — the row is informational.
+		return <div className="wpd-siteinfo__row" title={tooltip}>{body}</div>;
+	}
+	// Admin: open the themes management page (browse, switch, configure).
+	return (
+		<button
+			type="button"
+			className="wpd-siteinfo__row wpd-siteinfo__row--button"
+			onClick={() => onOpen(`${origin}/wp-admin/themes.php`, true)}
+			title={tooltip}
+		>
+			{body}
+		</button>
 	);
 }
 
-function PluginRow({ plugin, origin, onOpen }) {
-	const hasDetail = !!plugin.name && plugin.name !== plugin.slug;
-	const editHref = `${origin}/wp-admin/plugins.php`;
+function PluginPill({ plugin, onOpen }) {
+	const label = plugin.name || plugin.slug;
+	// Prefer the plugin's own homepage URL when REST gave us one. Otherwise
+	// fall back to the wp.org plugin directory — works for hosted plugins
+	// and 404s gracefully for premium/custom ones.
+	const href = plugin.pluginUri || `https://wordpress.org/plugins/${plugin.slug}/`;
+	const tooltip = plugin.version ? `${label} ${plugin.version}` : label;
 	return (
-		<div className="wpd-siteinfo__row">
-			<div className="wpd-siteinfo__row-main">
-				<div className="wpd-siteinfo__row-title">
-					{plugin.name || plugin.slug}
-					{plugin.version && (
-						<span className="wpd-siteinfo__row-version">{plugin.version}</span>
-					)}
-					{plugin.active === false && (
-						<span className="wpd-siteinfo__row-tag">inactive</span>
-					)}
-				</div>
-				{hasDetail && <div className="wpd-siteinfo__row-sub"><code>{plugin.slug}</code></div>}
-			</div>
-			<button
-				type="button"
-				className="wpd-siteinfo__row-aux"
-				onClick={() => onOpen(editHref, true)}
-				title="Open Plugins"
-				aria-label="Open Plugins"
-			>
-				<Icon icon={external} size={14} />
-			</button>
-		</div>
+		<button
+			type="button"
+			className="wpd-siteinfo__pill"
+			onClick={() => onOpen(href, true)}
+			title={tooltip}
+		>
+			{label}
+		</button>
 	);
 }
 
@@ -221,7 +212,7 @@ function mergePlugins(domSlugs, restPlugins, namespaces) {
 	const bySlug = new Map();
 
 	for (const slug of domSlugs) {
-		bySlug.set(slug, { slug, name: null, version: null, active: null });
+		bySlug.set(slug, { slug, name: null, version: null, active: null, pluginUri: null });
 	}
 
 	// Namespaces give one extra signal — drop core wp/v2, oembed/1.0 noise.
@@ -231,7 +222,7 @@ function mergePlugins(domSlugs, restPlugins, namespaces) {
 		const slugFromNs = ns.split('/')[0];
 		if (!slugFromNs || slugFromNs === 'wp') continue;
 		if (!bySlug.has(slugFromNs)) {
-			bySlug.set(slugFromNs, { slug: slugFromNs, name: null, version: null, active: null });
+			bySlug.set(slugFromNs, { slug: slugFromNs, name: null, version: null, active: null, pluginUri: null });
 		}
 	}
 
@@ -243,11 +234,16 @@ function mergePlugins(domSlugs, restPlugins, namespaces) {
 			name: p.name || null,
 			version: p.version || null,
 			active: p.status === 'active',
+			pluginUri: p.plugin_uri || null,
 		};
 		bySlug.set(slug, row);
 	}
 
-	return Array.from(bySlug.values()).sort((a, b) => a.slug.localeCompare(b.slug));
+	// Hide inactive plugins. DOM-detected slugs (active: null) and REST-active
+	// rows pass through; REST-confirmed inactive rows are dropped.
+	return Array.from(bySlug.values())
+		.filter((p) => p.active !== false)
+		.sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
 function stripTags(s) {

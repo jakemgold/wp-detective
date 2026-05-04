@@ -513,40 +513,11 @@ body {
 	}
 }
 
-.wpd-siteinfo__panel {
-	border-top: 1px solid var(--wpd-border);
-}
-
 .wpd-siteinfo__body {
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
 	padding: 10px var(--wpd-pad-x) 14px;
-}
-
-.wpd-siteinfo__summary {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	padding: 10px 12px;
-	background: var(--wpd-surface);
-	border: 1px solid var(--wpd-border);
-	border-radius: var(--wpd-radius);
-}
-
-.wpd-siteinfo__site-name {
-	font-weight: 600;
-	font-size: 13px;
-	color: var(--wpd-ink);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.wpd-siteinfo__site-desc {
-	font-size: 12px;
-	color: var(--wpd-ink-dim);
-	line-height: 1.35;
 }
 
 .wpd-siteinfo__group {
@@ -578,10 +549,30 @@ body {
 	background: var(--wpd-surface);
 	border: 1px solid var(--wpd-border);
 	border-radius: var(--wpd-radius-sm);
-	transition: border-color 0.12s;
+	transition: border-color 0.12s, background-color 0.12s;
 
 	&:hover {
 		border-color: var(--wpd-border-strong);
+	}
+}
+
+// `--button` variant: the row is itself a clickable <button>. Reset native
+// button styling, inherit text/font from the popup, match the card-row
+// hover treatment.
+.wpd-siteinfo__row--button {
+	width: 100%;
+	color: var(--wpd-ink);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+
+	&:hover {
+		background: var(--wpd-hover);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: -2px;
 	}
 }
 
@@ -639,41 +630,49 @@ body {
 	}
 }
 
-.wpd-siteinfo__row-aux {
-	flex-shrink: 0;
-	width: 26px;
-	height: 26px;
-	border: 0;
-	background: transparent;
-	color: var(--wpd-ink-dim);
-	border-radius: var(--wpd-radius-sm);
-	cursor: pointer;
-	display: grid;
-	place-items: center;
-	transition: color 0.1s, background-color 0.1s;
-
-	&:hover {
-		background: var(--wpd-hover);
-		color: var(--wpd-accent);
-	}
-
-	&:focus-visible {
-		outline: 2px solid var(--wpd-accent);
-		outline-offset: -2px;
-	}
-
-	svg {
-		width: 14px;
-		height: 14px;
-	}
-}
-
 .wpd-siteinfo__hint {
 	margin: 0;
 	padding: 0 2px;
 	font-size: 11px;
 	color: var(--wpd-ink-muted);
 	font-style: italic;
+}
+
+.wpd-siteinfo__pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.wpd-siteinfo__pill {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	padding: 4px 9px;
+	border: 1px solid var(--wpd-border);
+	border-radius: 999px;
+	background: var(--wpd-surface);
+	color: var(--wpd-ink);
+	font: inherit;
+	font-size: 11.5px;
+	line-height: 1.2;
+	cursor: pointer;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	transition: border-color 0.12s, background-color 0.12s;
+
+	// Mirror the card-row hover treatment: stronger border + filled bg,
+	// text color stays neutral.
+	&:hover {
+		border-color: var(--wpd-border-strong);
+		background: var(--wpd-hover);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wpd-accent);
+		outline-offset: 2px;
+	}
 }
 
 .wpd-devtools__chevron {

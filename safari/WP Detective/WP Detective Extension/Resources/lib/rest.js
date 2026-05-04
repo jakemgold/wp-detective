@@ -140,10 +140,13 @@
    * reveals plugins that register their own REST routes (wc/v3, yoast/v1,
    * contact-form-7/v1, etc.) even when DOM scanning misses them.
    */
-  async function fetchSiteInfo({ restApiRoot, origin, fetchImpl = fetch }) {
+  async function fetchSiteInfo({ restApiRoot, origin, nonce, fetchImpl = fetch }) {
     const root = normalizeRoot(restApiRoot, origin);
     try {
-      const res = await fetchImpl(root, { credentials: 'include' });
+      const res = await fetchImpl(root, {
+        credentials: 'include',
+        headers: nonce ? { 'X-WP-Nonce': nonce } : undefined,
+      });
       if (!res.ok) return null;
       return await res.json();
     } catch (_) {
@@ -156,11 +159,12 @@
    * The collection endpoint returns an array; `?status=active` filters to
    * the one currently serving the site. Returns the first entry or null.
    */
-  async function fetchActiveTheme({ restApiRoot, origin, fetchImpl = fetch }) {
+  async function fetchActiveTheme({ restApiRoot, origin, nonce, fetchImpl = fetch }) {
     const root = normalizeRoot(restApiRoot, origin);
     try {
       const res = await fetchImpl(`${root}wp/v2/themes?status=active`, {
         credentials: 'include',
+        headers: nonce ? { 'X-WP-Nonce': nonce } : undefined,
       });
       if (!res.ok) return null;
       const data = await res.json();
@@ -176,11 +180,12 @@
    * Returns an array of plugin objects with { plugin, name, version, author,
    * status, plugin_uri, ... } or null when unauthorized / REST is disabled.
    */
-  async function fetchPluginsDetail({ restApiRoot, origin, fetchImpl = fetch }) {
+  async function fetchPluginsDetail({ restApiRoot, origin, nonce, fetchImpl = fetch }) {
     const root = normalizeRoot(restApiRoot, origin);
     try {
       const res = await fetchImpl(`${root}wp/v2/plugins`, {
         credentials: 'include',
+        headers: nonce ? { 'X-WP-Nonce': nonce } : undefined,
       });
       if (!res.ok) return null;
       const data = await res.json();

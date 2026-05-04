@@ -186,20 +186,22 @@
     }
 
     if (msg.type === 'GET_SITE_INFO') {
-      // Runs from the page context, so cookies flow automatically and
-      // logged-in users get authenticated (non-public) endpoint data.
-      // All three calls are independent — fire them in parallel so the
-      // popup only waits for the slowest.
+      // Runs from the page context, so cookies flow automatically. The popup
+      // pre-reads window.wpApiSettings.nonce via chrome.scripting (MAIN world,
+      // which content scripts can't touch directly) and passes it in — WP's
+      // /wp/v2/themes and /wp/v2/plugins reject cookie auth without the
+      // X-WP-Nonce header even for read-only GETs.
       const ctx = detection.context;
+      const nonce = msg.nonce || null;
       Promise.all([
         globalThis.WPRest.fetchSiteInfo({
-          restApiRoot: ctx.restApiRoot, origin: location.origin,
+          restApiRoot: ctx.restApiRoot, origin: location.origin, nonce,
         }),
         globalThis.WPRest.fetchActiveTheme({
-          restApiRoot: ctx.restApiRoot, origin: location.origin,
+          restApiRoot: ctx.restApiRoot, origin: location.origin, nonce,
         }),
         globalThis.WPRest.fetchPluginsDetail({
-          restApiRoot: ctx.restApiRoot, origin: location.origin,
+          restApiRoot: ctx.restApiRoot, origin: location.origin, nonce,
         }),
       ]).then(([siteInfo, activeTheme, plugins]) => {
         sendResponse({ siteInfo, activeTheme, plugins });
