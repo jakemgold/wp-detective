@@ -43,6 +43,29 @@ rebuilds the popup bundle and rsyncs every shipping runtime file into that
 folder, so re-run it whenever `manifest.json`, `background.js`, `content.js`,
 `lib/*`, `popup/popup.html`, or any icon changes.
 
+## Known issues
+
+### Popup leaves a gap at the bottom after collapsing an accordion
+
+When an accordion (Site Information, Developer Tools, +New) expands the
+popup tall enough to scroll, then collapses, Safari leaves the popup
+window at the previous (taller) size — the now-shorter content sits at
+the top with empty space below, and there's nothing scrollable to
+re-anchor on. Closing and reopening the popup restores the correct size.
+
+Cause: Safari Web Extension popup windows appear to size against the
+WebContent process's first-paint measurement and don't re-measure when
+the body shrinks. `App.js` pins `html` and `body` heights to the React
+root's measured height to nudge a re-measure, which mitigates but does
+not fully resolve it. Chrome auto-sizes correctly and the same code is
+a no-op there.
+
+Workarounds tried that didn't resolve it: ResizeObserver on body /
+html, scrollTop reset, explicit min/max height, transform-trick reflow.
+
+If the bug becomes a release blocker, the fallback is to pin the popup
+to a fixed height (e.g. 600px) so it never grows or shrinks.
+
 ## Distribution
 
 For personal use, a Debug build signed with an ad-hoc identity (as
