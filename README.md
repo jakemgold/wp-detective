@@ -28,12 +28,15 @@ See [SAFARI.md](SAFARI.md) — requires Xcode and a one-time Xcode Run (⌘R).
 
 ## Features
 
-- **Detect WordPress** — Identifies WP sites automatically via REST API links, generator tags, asset paths, and body classes.
-- **Edit any page** — Jump to the WordPress editor for posts, pages, categories, tags, authors, and custom post types. Keyboard shortcut: `Alt+Shift+E` (`Option+Shift+E` on Mac), customizable at `chrome://extensions/shortcuts`.
-- **View/Preview from the editor** — See the published page or preview a draft directly from wp-admin. Works for all post types including CPTs.
-- **Identify the host** — Detects WP Engine, WordPress VIP, Pantheon, Kinsta, Flywheel, Cloudways, WordPress.com, Pressable, and local dev environments.
-- **Toggle the admin bar** — Hide or show the front-end admin bar per site, without flash.
-- **Developer tools** — Preview at mobile size, bust CDN cache, clear cookies and site data (preserving your WP login).
+- **Detect WordPress** — Identifies WP sites automatically via REST API links, generator tags, asset paths, and body classes. The toolbar icon has three states: gray with a slash for non-WP, gray for WP, blue for WP and logged in.
+- **Edit this page** — Jump straight to the editor for posts, pages, categories, tags, authors, and custom post types — including hyphenated CPT slugs like `case-study`. Keyboard shortcut: `Alt+Shift+E` (`Option+Shift+E` on Mac), customizable at `chrome://extensions/shortcuts`.
+- **View / Preview from the editor** — On wp-admin edit screens, see the published page or preview a draft (with nonce) in one click. Works for all post types.
+- **+ New content menu** — Mirrors the admin bar's "+ New" dropdown with the post types your role can create.
+- **Identify the host** — Detects WP Engine, WordPress VIP, Pantheon, Kinsta, Flywheel, Cloudways, WordPress.com, Pressable, and local dev environments. Cached per origin for 90 days.
+- **Toggle the admin bar** — Hide or show the front-end admin bar per site, without flash. Honors your profile setting and surfaces a clear hint when WP itself has the bar disabled.
+- **One-click sign out** — Inline confirm, then logs out via the admin bar's nonce so WordPress's "are you sure?" page is skipped.
+- **Site Information panel** — Active theme (name, version, author) and a wrap of plugin pills with version-on-hover. Pills link to each plugin's homepage. Powered by the WP REST API for admins, with DOM-scanned slugs as a graceful fallback.
+- **Developer tools** — Mobile preview window (iPhone-sized), bypass page cache, clear cookies + site data (preserving your WP login), Highlight Blocks (outline `wp-block-*` elements with a breadcrumb tooltip), and a Query Monitor toggle when QM is installed.
 
 ## Development
 
