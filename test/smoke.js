@@ -174,7 +174,11 @@ async function main() {
     assert(url && url.includes('lang=en'), 'resolver returns the admin bar href');
   }
 
-  // --- 8. Cookie-based logged-in detection (wp-settings fallback) ------
+  // --- 8. Cookie-based logged-in detection ----------------------------
+  // wordpress_logged_in_<hash> is the only reliable JS-visible signal:
+  // it's cleared on logout. wp-settings-* persists 1 year past logout so
+  // it must NOT be treated as "logged in" — produced persistent false
+  // positives previously.
   {
     console.log('\n[8] Cookie-based logged-in detection');
     const dom = new JSDOM(`<html><body></body></html>`);
@@ -182,10 +186,10 @@ async function main() {
     const check = ctx.WPDetect.detectLoggedInFromCookies;
     assert(check('wordpress_logged_in_abc123=user%7C1234') === true,
       'wordpress_logged_in cookie → logged in');
-    assert(check('wp-settings-1=a; wp-settings-time-1=123') === true,
-      'wp-settings cookie → logged in');
-    assert(check('other=x; wp-settings-42=val') === true,
-      'wp-settings cookie among others → logged in');
+    assert(check('wp-settings-1=a; wp-settings-time-1=123') === false,
+      'wp-settings alone → NOT a logged-in signal');
+    assert(check('other=x; wp-settings-42=val') === false,
+      'wp-settings among others → NOT a logged-in signal');
     assert(check('some_other_cookie=value') === false,
       'unrelated cookie → not logged in');
     assert(check('') === false, 'empty string → not logged in');
