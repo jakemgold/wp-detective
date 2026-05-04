@@ -1,16 +1,19 @@
 # WordPress Browser Extension
 
-> **Heads-up:** This codebase is in discussion to become the official WordPress browser extension. Active development is happening here in the interim; the eventual home will be in the WordPress org. Screenshots in this README will be refreshed for the v0.8.0 surface.
+> **Heads-up:** This codebase is in discussion to become the official WordPress browser extension. Active development is happening here in the interim; the eventual home will be in the WordPress org.
 
 A browser extension that detects WordPress sites and puts admin shortcuts, hosting info, and developer tools in your toolbar. Chrome is the primary target; Safari is supported via a companion Xcode project.
 
 <p align="center">
-  <img src="screenshots/logged-in.png" width="380" alt="Logged in — edit post, host detection, admin bar toggle">
-  <img src="screenshots/dev-tools.png" width="380" alt="Developer tools — mobile preview, cache bust, clear site data">
+  <img src="screenshots/logged-in.png" width="380" alt="Logged in — Edit Case Study, host detected as WordPress VIP, admin bar toggle, +New / Site Information / Developer Tools accordions">
+  <img src="screenshots/dev-tools.png" width="380" alt="Developer Tools expanded — Highlight Blocks toggle, Mobile Preview, Bypass Page Cache, Query Monitor, Clear Site Data">
 </p>
 <p align="center">
-  <img src="screenshots/wp-admin.png" width="380" alt="wp-admin editor — view/preview post, visit site">
-  <img src="screenshots/logged-out.png" width="380" alt="Logged out — WordPress version detected, login options">
+  <img src="screenshots/wp-admin.png" width="380" alt="wp-admin editor — View Post, Visit Site, WordPress Admin, Log Out">
+  <img src="screenshots/logged-out.png" width="380" alt="Logged out on a WordPress site — version detected, Log In / Log In Return to Page actions">
+</p>
+<p align="center">
+  <img src="screenshots/safari.png" width="600" alt="Safari companion build — same popup running natively in Safari on macOS">
 </p>
 
 ## Install
