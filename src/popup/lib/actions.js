@@ -31,11 +31,20 @@ export async function runAction(action, { origin, url, editUrl, viewUrl, logoutU
 			break;
 		// Prefer the admin bar's logout link — it carries the `_wpnonce` that
 		// makes WP skip its "are you sure?" confirmation. (We do our own
-		// inline confirm, so WP's would be a redundant second click.) Falls
-		// back to the bare URL when the admin bar wasn't on the page.
-		case 'signout':
-			target = logoutUrl || `${origin}/wp-login.php?action=logout`;
+		// inline confirm, so WP's would be a redundant second click.) Same-
+		// origin guard: the href came from page DOM and a malicious page
+		// could inject a fake admin bar pointing offsite. Fall back to the
+		// bare URL when the captured href isn't trustworthy.
+		case 'signout': {
+			let safeLogout = null;
+			if (logoutUrl) {
+				try {
+					if (new URL(logoutUrl).origin === origin) safeLogout = logoutUrl;
+				} catch (_) { /* malformed URL */ }
+			}
+			target = safeLogout || `${origin}/wp-login.php?action=logout`;
 			break;
+		}
 		case 'cachebust': {
 			const bust = Math.random().toString(36).slice(2, 7);
 			const u = new URL(url);
