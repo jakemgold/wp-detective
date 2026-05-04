@@ -1,6 +1,6 @@
 {
   "name": "wordpress-browser-extension",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "Browser extension that detects WordPress sites and surfaces admin/developer shortcuts.",
   "scripts": {
