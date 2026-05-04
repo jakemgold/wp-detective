@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WordPress Browser Extension",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "short_name": "WordPress",
   "description": "Detect WordPress sites, jump to the editor, identify the host, toggle the admin bar, and more.",
   "author": "Jake Goldman, Partner at Fueled",
