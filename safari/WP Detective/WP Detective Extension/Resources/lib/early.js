@@ -1,5 +1,5 @@
 /**
- * WP Detective — early injection
+ * WordPress Browser Extension — early injection
  *
  * Runs at document_start (before the page body has been parsed) so we can
  * hide the admin bar before it paints. Without this, users see a flash

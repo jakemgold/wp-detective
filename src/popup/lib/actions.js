@@ -5,7 +5,7 @@
  * open mobile preview, etc.).
  */
 
-export async function runAction(action, { origin, url, editUrl, viewUrl, newTab = false }) {
+export async function runAction(action, { origin, url, editUrl, viewUrl, logoutUrl, newTab = false }) {
 	let target;
 	switch (action) {
 		case 'edit':
@@ -29,10 +29,12 @@ export async function runAction(action, { origin, url, editUrl, viewUrl, newTab 
 		case 'login-return':
 			target = `${origin}/wp-login.php?redirect_to=${encodeURIComponent(url)}`;
 			break;
-		// /wp-login.php?action=logout shows WP's "are you sure?" confirmation,
-		// which is the safe UX — no accidental sign-outs from the popup.
+		// Prefer the admin bar's logout link — it carries the `_wpnonce` that
+		// makes WP skip its "are you sure?" confirmation. (We do our own
+		// inline confirm, so WP's would be a redundant second click.) Falls
+		// back to the bare URL when the admin bar wasn't on the page.
 		case 'signout':
-			target = `${origin}/wp-login.php?action=logout`;
+			target = logoutUrl || `${origin}/wp-login.php?action=logout`;
 			break;
 		case 'cachebust': {
 			const bust = Math.random().toString(36).slice(2, 7);
@@ -131,7 +133,6 @@ export async function toggleQueryMonitor() {
 	try {
 		const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 		await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_QUERY_MONITOR' });
-		window.close();
 	} catch (_) {
 		/* content script unreachable — nothing to toggle */
 	}

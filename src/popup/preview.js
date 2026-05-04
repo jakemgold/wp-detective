@@ -59,41 +59,6 @@ const fixtures = [
 								{ id: 'user', label: 'User', href: 'https://myblog.test/wp-admin/user-new.php' },
 								{ id: 'product', label: 'Product', href: 'https://myblog.test/wp-admin/post-new.php?post_type=product' },
 							],
-							pluginMenuItems: [
-								{
-									id: 'vip-cache',
-									label: 'VIP Cache',
-									children: [
-										{ id: 'vip-purge-page', label: 'Purge this page', href: 'https://myblog.test/wp-admin/admin-post.php?action=vip_purge_page' },
-										{ id: 'vip-purge-all', label: 'Purge everything', href: 'https://myblog.test/wp-admin/admin-post.php?action=vip_purge_all' },
-									],
-								},
-								{
-									id: 'wpseo-menu',
-									label: 'Yoast SEO',
-									href: 'https://myblog.test/wp-admin/admin.php?page=wpseo_dashboard',
-									children: [
-										{ id: 'wpseo-keyword', label: 'Keyword research', href: 'https://myblog.test/wp-admin/admin.php?page=wpseo_tools' },
-										{ id: 'wpseo-settings', label: 'Settings', href: 'https://myblog.test/wp-admin/admin.php?page=wpseo_settings' },
-									],
-								},
-								{
-									id: 'preview',
-									label: 'Preview environments',
-									children: [
-										{ id: 'preview-staging', label: 'Staging', href: 'https://myblog.test/wp-admin/admin.php?page=previews&env=staging' },
-										{
-											id: 'preview-branches',
-											label: 'Feature branches',
-											children: [
-												{ id: 'preview-pr-42', label: 'PR #42 — redesign', href: 'https://myblog.test/wp-admin/admin.php?page=previews&env=pr-42' },
-												{ id: 'preview-pr-45', label: 'PR #45 — cart fix', href: 'https://myblog.test/wp-admin/admin.php?page=previews&env=pr-45' },
-											],
-										},
-									],
-								},
-								{ id: 'acf-options', label: 'Site Options (ACF)', href: 'https://myblog.test/wp-admin/admin.php?page=acf-options' },
-							],
 						},
 					},
 				}}

@@ -1,5 +1,5 @@
 /**
- * WP Detective — background service worker
+ * WordPress Browser Extension — background service worker
  *
  * Responsibilities:
  *   - Cache per-origin detection results in chrome.storage.local
@@ -52,8 +52,35 @@ async function purgeStale() {
 
 // --- Detection handling ---------------------------------------------------
 
-chrome.runtime.onStartup.addListener(purgeStale);
-chrome.runtime.onInstalled.addListener(purgeStale);
+chrome.runtime.onStartup.addListener(onLoad);
+chrome.runtime.onInstalled.addListener(onLoad);
+
+async function onLoad() {
+  await purgeStale();
+  await repaintAllTabs();
+}
+
+// On SW startup (browser launch) and onInstalled (extension install/reload)
+// the content scripts in already-open tabs are orphaned and can no longer
+// report to us, so their toolbar icons stay at the default until the user
+// navigates. Walk the open tabs and re-paint from cache instead.
+async function repaintAllTabs() {
+  let tabs;
+  try { tabs = await chrome.tabs.query({}); } catch (_) { return; }
+  const cache = await getCache();
+  for (const tab of tabs) {
+    if (!tab.id || !tab.url || !/^https?:/.test(tab.url)) continue;
+    try {
+      const origin = new URL(tab.url).origin;
+      const entry = cache[origin];
+      await updateToolbar(
+        tab.id,
+        entry?.isWordPress || false,
+        { isLoggedIn: entry?.isLoggedIn || false },
+      );
+    } catch (_) { /* invalid URL or tab closed */ }
+  }
+}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg) return;
@@ -68,7 +95,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     getEntry(msg.origin).then(sendResponse);
     return true;
   }
+
+  // Popup pushes back its final detection (which may include the cookie-API
+  // login override) so the toolbar icon and cache reflect it without waiting
+  // for a navigation.
+  if (msg.type === 'POPUP_DETECTION_RESOLVED') {
+    handlePopupResolution(msg).then(() => sendResponse({ ok: true }));
+    return true;
+  }
 });
+
+async function handlePopupResolution(msg) {
+  const { origin, tabId, isLoggedIn, isWordPress } = msg;
+  if (!origin) return;
+  const cache = await getCache();
+  const existing = cache[origin] || null;
+  if (existing) {
+    existing.isLoggedIn = !!isLoggedIn;
+    existing.lastSeen = Date.now();
+    cache[origin] = existing;
+    await writeCache(cache);
+  }
+  if (tabId) await updateToolbar(tabId, !!isWordPress, { isLoggedIn });
+}
 
 async function handleDetection(msg, sender) {
   const { origin, detection, hostFromDOM } = msg;
@@ -97,6 +146,11 @@ async function handleDetection(msg, sender) {
       existing ? existing.confidence : 0,
     ),
     signals: detection.signals,
+    // Cached so the toolbar repaint after SW startup/install can show the
+    // active variant without waiting for fresh detection. May be stale if
+    // the user logs out elsewhere; corrected on next page load and by the
+    // popup pushing its cookie-API result via POPUP_DETECTION_RESOLVED.
+    isLoggedIn: !!detection.context?.isLoggedIn,
     // Only advance checkedAt when we have a confident positive detection,
     // so a single ambiguous page view doesn't reset the clock.
     checkedAt: freshlyDetected
@@ -131,21 +185,26 @@ async function handleDetection(msg, sender) {
 // --- Toolbar icon + title -------------------------------------------------
 
 async function updateToolbar(tabId, isWordPress, context) {
-  // Distinct icons signal the active/inactive state. Until icons exist,
-  // the setIcon call throws; we swallow and fall back to the title.
+  // Three states: not WP (gray + slash), WP but not logged in (gray),
+  // WP + logged in (blue). The cache doesn't carry isLoggedIn so on a
+  // tab-URL-change icon refresh we'll briefly show the gray "WP" variant
+  // until the content script reports back with auth context.
+  const variant = !isWordPress ? '-inactive'
+    : context?.isLoggedIn ? '-active'
+    : '';
   try {
     await chrome.action.setIcon({
       tabId,
       path: {
-        16: `icons/icon-16${isWordPress ? '-active' : ''}.png`,
-        32: `icons/icon-32${isWordPress ? '-active' : ''}.png`,
+        16: `icons/icon-16${variant}.png`,
+        32: `icons/icon-32${variant}.png`,
       },
     });
   } catch (_) { /* icons not shipped yet */ }
 
   const title = isWordPress
     ? `WordPress detected${context?.isLoggedIn ? ' — logged in' : ''}`
-    : 'WP Detective';
+    : 'WordPress Browser Extension';
   try {
     await chrome.action.setTitle({ tabId, title });
   } catch (_) { /* tab may have closed */ }
@@ -213,6 +272,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   try {
     const origin = new URL(tab.url).origin;
     const entry = await getEntry(origin);
-    if (entry) await updateToolbar(tabId, entry.isWordPress, {});
+    if (entry) await updateToolbar(tabId, entry.isWordPress, {
+      isLoggedIn: entry.isLoggedIn || false,
+    });
   } catch (_) { /* invalid URL */ }
 });

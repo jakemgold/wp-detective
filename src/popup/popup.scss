@@ -168,6 +168,13 @@ body {
 	&:hover:not(:has(.wpd-card__main[disabled])) {
 		border-color: var(--wpd-border-strong);
 	}
+
+	// Apply the hover background at the row level so trailing siblings
+	// (e.g., the confirm pill) sit on the same surface as the main button
+	// instead of leaving a white strip beside them.
+	&:has(.wpd-card__main:hover:not([disabled])) {
+		background: var(--wpd-hover);
+	}
 }
 
 .wpd-card__main {
@@ -185,9 +192,8 @@ body {
 	cursor: pointer;
 	transition: background-color 0.1s;
 
-	&:hover:not([disabled]) {
-		background: var(--wpd-hover);
-	}
+	// Background hover handled at .wpd-card-row level so trailing siblings
+	// share the same hover surface. Keep the focus-visible outline here.
 
 	&:focus-visible {
 		outline: 2px solid var(--wpd-accent);
@@ -283,6 +289,29 @@ body {
 	.wpd-card__main {
 		justify-content: space-between;
 	}
+
+	&.is-disabled {
+		opacity: 0.55;
+
+		.wpd-card__main {
+			cursor: not-allowed;
+		}
+	}
+}
+
+.wpd-toggle-hint {
+	// Parent section uses 6px gap between cards; pull the hint up so it
+	// reads as a footnote on the disabled toggle, and add bottom margin
+	// to put extra breathing room before the next action card.
+	margin: -2px 0 8px;
+	padding: 0 14px;
+	font-size: 11px;
+	line-height: 1.4;
+	color: var(--wpd-ink-dim);
+
+	.wpd-info-row__link {
+		font-size: inherit;
+	}
 }
 
 .wpd-switch {
@@ -318,15 +347,18 @@ body {
 /* Inline confirm — destructive variant of card-row --------------------- */
 
 .wpd-card-row.is-destructive {
-	&:hover {
+	// @wordpress/ui Button only ships brand + neutral tones, so we paint
+	// the confirm pill red ourselves to match the destructive context.
+	// The trigger button itself stays neutral on hover — the confirm pill
+	// is enough of a destructive cue and matches other card-row hovers.
+	.wpd-confirm-pill button {
+		background: var(--wpds-color-bg-interactive-error, #c53030);
 		border-color: var(--wpds-color-stroke-interactive-error, #c53030);
-	}
+		color: #fff;
 
-	.wpd-card__main:hover:not([disabled]) {
-		color: var(--wpds-color-fg-interactive-error, #c53030);
-
-		.wpd-card__icon {
-			color: inherit;
+		&:hover {
+			background: var(--wpds-color-bg-interactive-error-hover, #a51c1c);
+			border-color: var(--wpds-color-bg-interactive-error-hover, #a51c1c);
 		}
 	}
 }
@@ -391,13 +423,16 @@ body {
 	padding: 0 var(--wpd-pad-x) 12px;
 }
 
-/* Plugin actions — same collapsible shape as NewContent, different intent */
+/* Developer tools — plain collapsible (not a card) --------------------- */
 
-.wpd-plugins {
+.wpd-devtools {
 	border-top: 1px solid var(--wpd-border);
+	/* The section above already sets its own bottom padding; the divider
+	 * sits flush against it so the devtools row feels like a continuation,
+	 * not a new block with extra air. */
 }
 
-.wpd-plugins__trigger {
+.wpd-devtools__trigger {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -421,157 +456,11 @@ body {
 	}
 }
 
-.wpd-plugins__label-group {
+.wpd-devtools__label-group {
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
 	color: var(--wpd-ink);
-}
-
-.wpd-plugins__count {
-	display: inline-grid;
-	place-items: center;
-	min-width: 18px;
-	height: 18px;
-	padding: 0 5px;
-	border-radius: 9px;
-	background: var(--wpd-border);
-	color: var(--wpd-ink-dim);
-	font-size: 10px;
-	font-weight: 500;
-	letter-spacing: 0;
-}
-
-.wpd-plugins__chevron {
-	display: inline-grid;
-	place-items: center;
-	color: var(--wpd-ink-muted);
-	transition: transform 0.15s ease-out;
-
-	&.is-open {
-		transform: rotate(180deg);
-	}
-}
-
-.wpd-plugins__items {
-	display: flex;
-	flex-direction: column;
-	gap: var(--wpd-gap);
-	padding: 0 var(--wpd-pad-x) 12px;
-}
-
-/* Nested plugin group — an item that has its own submenu. Rendered as a
- * card-shaped trigger that expands to reveal indented children. */
-.wpd-plugin-group {
-	background: var(--wpd-surface);
-	border: 1px solid var(--wpd-border);
-	border-radius: var(--wpd-radius);
-	overflow: hidden;
-	transition: border-color 0.12s;
-
-	&:hover {
-		border-color: var(--wpd-border-strong);
-	}
-}
-
-.wpd-plugin-group__trigger {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	width: 100%;
-	padding: 10px 12px;
-	border: 0;
-	background: transparent;
-	color: var(--wpd-ink);
-	font: inherit;
-	font-weight: 500;
-	text-align: left;
-	cursor: pointer;
-
-	&:hover {
-		background: var(--wpd-hover);
-	}
-
-	&:focus-visible {
-		outline: 2px solid var(--wpd-accent);
-		outline-offset: -2px;
-	}
-}
-
-.wpd-plugin-group__label-group {
-	display: inline-flex;
-	align-items: center;
-	gap: 12px;
-	min-width: 0;
-	flex: 1;
-}
-
-.wpd-plugin-group__label {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.wpd-plugin-group__chevron {
-	display: inline-grid;
-	place-items: center;
-	color: var(--wpd-ink-muted);
-	transition: transform 0.15s ease-out;
-	flex-shrink: 0;
-
-	&.is-open {
-		transform: rotate(180deg);
-	}
-}
-
-.wpd-plugin-group__panel {
-	border-top: 1px solid var(--wpd-border);
-}
-
-.wpd-plugin-group__items {
-	display: flex;
-	flex-direction: column;
-	gap: var(--wpd-gap);
-	padding: 8px 8px 10px;
-}
-
-/* Developer tools — plain collapsible (not a card) --------------------- */
-
-.wpd-devtools {
-	border-top: 1px solid var(--wpd-border);
-	/* The section above already sets its own bottom padding; the divider
-	 * sits flush against it so the devtools row feels like a continuation,
-	 * not a new block with extra air. */
-}
-
-.wpd-devtools__trigger {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	width: 100%;
-	padding: 10px var(--wpd-pad-x);
-	border: 0;
-	background: transparent;
-	color: var(--wpd-ink-dim);
-	font: inherit;
-	text-align: left;
-	cursor: pointer;
-
-	&:hover {
-		color: var(--wpd-ink);
-	}
-
-	&:focus-visible {
-		outline: 2px solid var(--wpd-accent);
-		outline-offset: -2px;
-	}
-}
-
-.wpd-devtools__label {
-	font-size: 11px;
-	font-weight: 500;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
 }
 
 .wpd-devtools__chevron {

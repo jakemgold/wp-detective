@@ -1,4 +1,4 @@
-# WP Detective — Browser Extension for WordPress
+# WordPress Browser Extension
 
 A browser extension that detects WordPress sites and puts admin shortcuts, hosting info, and developer tools in your toolbar. Chrome is the primary target; Safari is supported via a companion Xcode project.
 

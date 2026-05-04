@@ -38,9 +38,6 @@ cp "$ROOT/dist/popup.css"              "$DEST/dist/"
 cp "$ROOT/dist/popup.js"               "$DEST/dist/"
 cp "$ROOT/dist/popup.js.LICENSE.txt"   "$DEST/dist/"
 
-cp "$ROOT/icons/icon-16.png"  "$DEST/icons/"
-cp "$ROOT/icons/icon-32.png"  "$DEST/icons/"
-cp "$ROOT/icons/icon-48.png"  "$DEST/icons/"
-cp "$ROOT/icons/icon-128.png" "$DEST/icons/"
+cp "$ROOT/icons"/*.png "$DEST/icons/"
 
 echo "Synced runtime files → $DEST"

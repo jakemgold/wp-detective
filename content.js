@@ -1,5 +1,5 @@
 /**
- * WP Detective — content script (document_idle)
+ * WordPress Browser Extension — content script (document_idle)
  *
  * Responsibilities:
  *   1. Run detection against the loaded DOM and report to background.
@@ -108,13 +108,49 @@
     if (!msg) return;
 
     if (msg.type === 'GET_LIVE_DETECTION') {
+      // Re-run detection on demand. The IIFE-scope `detection` captured at
+      // document_idle goes stale when the user logs in elsewhere and returns
+      // to a BFCache'd or page-cached version of this URL.
+      const fresh = globalThis.WPDetect.detectWordPress(document);
+      if (!fresh.context.isLoggedIn) {
+        fresh.context.isLoggedIn =
+          globalThis.WPDetect.detectLoggedInFromCookies(document.cookie);
+      }
       sendResponse({
         url: location.href,
         origin: location.origin,
         pathname: location.pathname,
-        detection,
+        detection: fresh,
       });
       return;
+    }
+
+    if (msg.type === 'GET_FRESH_DETECTION') {
+      // Bypasses the browser HTTP cache and BFCache via cache: 'no-store'
+      // and re-runs detection against the freshly fetched HTML. Used by the
+      // popup when the live DOM is stale (admin bar missing despite the user
+      // being logged in per chrome.cookies). Page caches that vary on the
+      // auth cookie return logged-in HTML here; ones that don't return the
+      // same stale response, in which case the popup falls back to a reload
+      // prompt.
+      fetch(location.href, {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      })
+        .then(async (res) => {
+          if (!res.ok) return sendResponse({ detection: null });
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const det = globalThis.WPDetect.detectWordPress(doc);
+          if (!det.context.isLoggedIn) {
+            det.context.isLoggedIn =
+              globalThis.WPDetect.detectLoggedInFromCookies(document.cookie);
+          }
+          sendResponse({ detection: det });
+        })
+        .catch(() => sendResponse({ detection: null }));
+      return true; // async
     }
 
     if (msg.type === 'APPLY_ADMIN_BAR_PREF') {

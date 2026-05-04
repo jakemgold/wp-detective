@@ -10,10 +10,9 @@ import {
 } from '@wordpress/icons';
 import { Header } from './Header';
 import { ActionRow } from './ActionRow';
-import { AdminBarToggle } from './AdminBarToggle';
+import { ToggleRow } from './ToggleRow';
 import { DevTools } from './DevTools';
 import { NewContent } from './NewContent';
-import { PluginActions } from './PluginActions';
 import { InlineConfirm } from './InlineConfirm';
 import { usePrefs } from '../hooks/usePrefs';
 import { runAction, applyAdminBarPref, requestRestEditUrl } from '../lib/actions';
@@ -63,8 +62,8 @@ export function DetectedView({ result, host }) {
 				{isLoggedIn && (
 					<InlineConfirm
 						icon={login}
-						label="Sign out"
-						onConfirm={() => runAction('signout', { origin, url })}
+						label="Log Out"
+						onConfirm={() => runAction('signout', { origin, url, logoutUrl: ctx.adminBarLogoutHref })}
 						destructive
 					/>
 				)}
@@ -72,11 +71,8 @@ export function DetectedView({ result, host }) {
 			{isLoggedIn && ctx.newContentItems?.length > 0 && (
 				<NewContent items={ctx.newContentItems} onOpen={openUrl} />
 			)}
-			{isLoggedIn && ctx.pluginMenuItems?.length > 0 && (
-				<PluginActions items={ctx.pluginMenuItems} onOpen={openUrl} />
-			)}
 			{!isWpAdmin && (
-				<DevTools origin={origin} url={url} hasQueryMonitor={!!ctx.hasQueryMonitor} />
+				<DevTools origin={origin} url={url} hasQueryMonitor={!!ctx.hasQueryMonitor} qmOpen={!!ctx.qmOpen} />
 			)}
 		</>
 	);
@@ -111,7 +107,7 @@ function WpAdminActions({ ctx, origin, url }) {
 			{viewHrefSafe && (
 				<ActionRow
 					icon={seen}
-					label={`${verb} this ${typeLabel}`}
+					label={`${verb} ${typeLabel}`}
 					onClick={() => runAction('view-post', { origin, url, viewUrl: viewHrefSafe })}
 					onNewTab={() =>
 						runAction('view-post', { origin, url, viewUrl: viewHrefSafe, newTab: true })
@@ -121,7 +117,7 @@ function WpAdminActions({ ctx, origin, url }) {
 			)}
 			<ActionRow
 				icon={globe}
-				label="Visit site"
+				label="Visit Site"
 				onClick={() => runAction('visit-site', { origin, url })}
 				onNewTab={() => runAction('visit-site', { origin, url, newTab: true })}
 			/>
@@ -179,21 +175,27 @@ function FrontendLoggedInActions({ ctx, origin, url }) {
 }
 
 function AdminBarSection({ ctx, origin, prefs, onToggle }) {
-	if (!ctx.hasAdminBar) {
-		return (
-			<div className="wpd-info-row">
-				<span>Toolbar disabled in WordPress.</span>
+	if (ctx.hasAdminBar) {
+		return <ToggleRow icon={seen} label="Show Admin Bar" checked={!prefs.adminBarHidden} onChange={onToggle} />;
+	}
+	// Logged-in but no admin bar — could be profile pref, a theme calling
+	// show_admin_bar(false), or stale page-cached HTML. "Appears" hedges
+	// honestly across all cases without claiming a definite cause.
+	return (
+		<>
+			<ToggleRow icon={seen} label="Show Admin Bar" checked={false} disabled />
+			<div className="wpd-toggle-hint">
+				Admin bar appears to be disabled, which limits this extension.{' '}
 				<button
 					type="button"
 					className="wpd-info-row__link"
 					onClick={() => runAction('profile', { origin, url: '' })}
 				>
-					Change in profile →
+					Check profile →
 				</button>
 			</div>
-		);
-	}
-	return <AdminBarToggle checked={!prefs.adminBarHidden} onChange={onToggle} />;
+		</>
+	);
 }
 
 function LoggedOutActions({ origin, url }) {
@@ -201,13 +203,13 @@ function LoggedOutActions({ origin, url }) {
 		<>
 			<ActionRow
 				icon={key}
-				label="Admin login"
+				label="Log In"
 				onClick={() => runAction('login', { origin, url })}
 				onNewTab={() => runAction('login', { origin, url, newTab: true })}
 			/>
 			<ActionRow
 				icon={keyboardReturn}
-				label="Admin login, return to page"
+				label="Log In, Return to Page"
 				onClick={() => runAction('login-return', { origin, url })}
 				onNewTab={() => runAction('login-return', { origin, url, newTab: true })}
 			/>

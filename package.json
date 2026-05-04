@@ -1,8 +1,8 @@
 {
-  "name": "wp-detective",
+  "name": "wordpress-browser-extension",
   "version": "0.7.0",
   "private": true,
-  "description": "Chrome extension that detects WordPress sites and surfaces admin/developer shortcuts.",
+  "description": "Browser extension that detects WordPress sites and surfaces admin/developer shortcuts.",
   "scripts": {
     "build": "cross-env NODE_ENV=production TENUP_NO_EXTERNALS=true 10up-toolkit build",
     "start": "cross-env NODE_ENV=development TENUP_NO_EXTERNALS=true 10up-toolkit start",
@@ -16,7 +16,8 @@
   },
   "devDependencies": {
     "10up-toolkit": "^6.5.1",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "sharp": "^0.34.5"
   },
   "overrides": {
     "webpack": "5.99.0"

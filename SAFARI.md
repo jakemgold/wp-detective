@@ -1,9 +1,15 @@
-# WP Detective for Safari
+# WordPress Browser Extension — Safari
 
 The extension ships a companion Xcode project under `safari/` that wraps the
 same extension files in a macOS host app — Safari's own packaging model.
 The runtime (background, content scripts, popup) is identical to the
 Chrome build.
+
+> The Xcode project files and folder names still use the original
+> `WP Detective` literal, pending an in-Xcode "Rename Project" pass and a
+> bundle-ID change coordinated with whoever owns the Apple developer account.
+> The user-facing display name (manifest, Settings → Extensions) is already
+> the new "WordPress Browser Extension."
 
 ## Build & install (developer)
 
@@ -23,7 +29,7 @@ In Xcode:
 2. Press **Run** (⌘R). Xcode builds the container app, installs it, and
    launches it once.
 3. Quit the launched app.
-4. Open Safari → Settings → Extensions → enable **WP Detective**.
+4. Open Safari → Settings → Extensions → enable **WordPress Browser Extension**.
 
 If Safari refuses to enable an unsigned extension, turn on:
 **Safari → Develop → Allow Unsigned Extensions**. This setting resets each

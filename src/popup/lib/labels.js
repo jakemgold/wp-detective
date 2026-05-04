@@ -5,22 +5,22 @@
 export function editLabel(ctx, editable) {
 	if (!editable) return editDisabledLabel(ctx);
 	if (ctx.pageType === 'term') {
-		if (ctx.taxonomy === 'category') return 'Edit this Category';
-		if (ctx.taxonomy === 'post_tag') return 'Edit this Tag';
-		return 'Edit this Term';
+		if (ctx.taxonomy === 'category') return 'Edit Category';
+		if (ctx.taxonomy === 'post_tag') return 'Edit Tag';
+		return 'Edit Term';
 	}
-	if (ctx.pageType === 'author') return 'Edit this Author';
-	if (ctx.postType) return `Edit this ${postTypeLabel(ctx.postType)}`;
-	return 'Edit this page';
+	if (ctx.pageType === 'author') return 'Edit Author';
+	if (ctx.postType) return `Edit ${postTypeLabel(ctx.postType)}`;
+	return 'Edit Page';
 }
 
 export function editDisabledLabel(ctx) {
-	if (ctx.pageType === 'archive') return 'Edit archive (coming soon)';
-	if (ctx.pageType === 'home') return 'Edit homepage (coming soon)';
-	if (ctx.pageType === 'term') return 'Edit term (not resolvable)';
-	if (ctx.pageType === 'author') return 'Edit author (not resolvable)';
-	if (ctx.pageType === 'search' || ctx.pageType === '404') return 'Nothing to edit';
-	return 'Edit this page';
+	if (ctx.pageType === 'archive') return 'Edit Archive (Coming Soon)';
+	if (ctx.pageType === 'home') return 'Edit Homepage (Coming Soon)';
+	if (ctx.pageType === 'term') return 'Edit Term (Not Resolvable)';
+	if (ctx.pageType === 'author') return 'Edit Author (Not Resolvable)';
+	if (ctx.pageType === 'search' || ctx.pageType === '404') return 'Nothing to Edit';
+	return 'Edit Page';
 }
 
 /**
