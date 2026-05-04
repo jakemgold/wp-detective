@@ -5,6 +5,8 @@ CLAUDE.md
 .DS_Store
 # preview harness is a dev-only artifact — rebuild locally with npm run build
 dist/preview.*
+# release zips produced by scripts/package-chrome.sh — attach to GitHub Releases
+release/
 # Xcode — user-specific state only; the Safari project itself is committed
 safari/**/xcuserdata/
 safari/**/*.xcuserstate

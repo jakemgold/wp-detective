@@ -6,7 +6,8 @@
   "scripts": {
     "build": "cross-env NODE_ENV=production TENUP_NO_EXTERNALS=true 10up-toolkit build",
     "start": "cross-env NODE_ENV=development TENUP_NO_EXTERNALS=true 10up-toolkit start",
-    "build:safari": "npm run build && bash scripts/sync-safari.sh"
+    "build:safari": "npm run build && bash scripts/sync-safari.sh",
+    "package:chrome": "bash scripts/package-chrome.sh"
   },
   "dependencies": {
     "@wordpress/icons": "^12.2.0",

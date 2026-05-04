@@ -1,5 +1,7 @@
 # WordPress Browser Extension
 
+> **Heads-up:** This codebase is in discussion to become the official WordPress browser extension. Active development is happening here in the interim; the eventual home will be in the WordPress org. Screenshots in this README will be refreshed for the v0.8.0 surface.
+
 A browser extension that detects WordPress sites and puts admin shortcuts, hosting info, and developer tools in your toolbar. Chrome is the primary target; Safari is supported via a companion Xcode project.
 
 <p align="center">
@@ -44,6 +46,14 @@ npm start         # watch mode
 ```
 
 Run smoke tests for `lib/` with `cd test && npm install && npm test`.
+
+## Credits
+
+Substantial contributions from [Fabian Kägy](https://github.com/fabiankaegy):
+the React popup architecture, the Safari companion Xcode project, the Site
+Information panel, and the Block Inspector — all merged from his fork at
+[fabiankaegy/wp-detective](https://github.com/fabiankaegy/wp-detective)
+with authorship preserved.
 
 ## License
 
