@@ -16,8 +16,8 @@ Chrome build.
 Requirements: macOS with Xcode installed (not just Command Line Tools).
 
 ```
-git clone git@github.com:fabiankaegy/wp-detective.git
-cd wp-detective
+git clone https://github.com/jakemgold/wordpress-browser-extension.git
+cd wordpress-browser-extension
 npm install
 npm run build:safari
 open 'safari/WP Detective/WP Detective.xcodeproj'

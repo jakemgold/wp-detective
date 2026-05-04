@@ -20,7 +20,7 @@ A browser extension that detects WordPress sites and puts admin shortcuts, hosti
 
 ### Chrome
 
-1. Download the latest zip from [Releases](https://github.com/jakemgold/wp-detective/releases)
+1. Download the latest zip from [Releases](https://github.com/jakemgold/wordpress-browser-extension/releases)
 2. Unzip to a folder
 3. Open `chrome://extensions`, enable **Developer mode**
 4. Click **Load unpacked** and select the unzipped folder
