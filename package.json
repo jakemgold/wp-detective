@@ -3,6 +3,15 @@
   "version": "0.8.2",
   "private": true,
   "description": "Browser extension that detects WordPress sites and surfaces admin/developer shortcuts.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WordPress/browser-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WordPress/browser-extension/issues"
+  },
+  "homepage": "https://github.com/WordPress/browser-extension#readme",
   "scripts": {
     "build": "cross-env NODE_ENV=production TENUP_NO_EXTERNALS=true 10up-toolkit build",
     "start": "cross-env NODE_ENV=development TENUP_NO_EXTERNALS=true 10up-toolkit start",

@@ -1,0 +1,25 @@
+# Code owners — anyone listed here must approve PRs touching the matched paths.
+# Pair this with branch protection on `main` set to "Require review from Code Owners"
+# so no merge can land without a maintainer review.
+#
+# Order matters: later patterns override earlier ones.
+
+# All paths default to both maintainers.
+*       @jakemgold @fabiankaegy
+
+# Safari-side changes — Fabian originated this surface.
+/safari/        @jakemgold @fabiankaegy
+/SAFARI.md      @jakemgold @fabiankaegy
+
+# Popup React surface — Fabian originated this too.
+/popup/         @jakemgold @fabiankaegy
+/src/           @jakemgold @fabiankaegy
+
+# Governance and community-facing files require both maintainers explicitly.
+/README.md          @jakemgold @fabiankaegy
+/MAINTAINERS.md     @jakemgold @fabiankaegy
+/CONTRIBUTING.md    @jakemgold @fabiankaegy
+/SECURITY.md        @jakemgold @fabiankaegy
+/ROADMAP.md         @jakemgold @fabiankaegy
+/LICENSE            @jakemgold @fabiankaegy
+/.github/           @jakemgold @fabiankaegy

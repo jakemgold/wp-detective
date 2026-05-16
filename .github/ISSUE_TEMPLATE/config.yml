@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussion / "should we…?" / UX feedback
+    url: https://github.com/WordPress/browser-extension/discussions
+    about: |
+      For open-ended questions, ideas without a concrete acceptance criterion,
+      or design feedback, please use Discussions instead of Issues.
+  - name: Report a security vulnerability
+    url: https://github.com/WordPress/browser-extension/security/advisories/new
+    about: |
+      Do not open a public Issue for security problems. Use GitHub's private
+      vulnerability reporting; see SECURITY.md for details.

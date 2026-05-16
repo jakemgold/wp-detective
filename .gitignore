@@ -12,3 +12,6 @@ safari/**/xcuserdata/
 safari/**/*.xcuserstate
 safari/**/DerivedData/
 safari/**/build/
+# local migration scratch — referenced during the transfer to
+# WordPress/browser-extension; not shipped to either repo
+.transfer/
