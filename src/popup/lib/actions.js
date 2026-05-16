@@ -86,13 +86,21 @@ const WP_COOKIE_PATTERNS = [/^wordpress_/, /^wp-settings-/, /^wp_/];
 const isWpCookie = (name) => WP_COOKIE_PATTERNS.some((re) => re.test(name));
 
 async function clearSiteData(origin) {
-	// 1. Remove all cookies for this origin except WordPress auth cookies.
+	// 1. Remove cookies scoped to this exact host, except WordPress auth.
+	//
+	// `chrome.cookies.getAll({ domain })` matches cookies whose effective
+	// domain is `domain` OR any parent of it — so on `www.example.com` it
+	// would also return cookies set with `Domain=.example.com`. Removing
+	// those would silently wipe sibling subdomains (e.g. signing the user
+	// out of `mail.example.com`), which is not what "clear data on this
+	// site" should do. We filter to host-only cookies whose stored domain
+	// matches exactly, leaving parent-domain cookies alone.
 	const parsedUrl = new URL(origin);
 	const allCookies = await chrome.cookies.getAll({ domain: parsedUrl.hostname });
 	const removePromises = allCookies
-		.filter((c) => !isWpCookie(c.name))
+		.filter((c) => c.hostOnly && c.domain === parsedUrl.hostname && !isWpCookie(c.name))
 		.map((c) => {
-			const cookieUrl = `${c.secure ? 'https' : 'http'}://${c.domain.replace(/^\./, '')}${c.path}`;
+			const cookieUrl = `${c.secure ? 'https' : 'http'}://${c.domain}${c.path}`;
 			return chrome.cookies.remove({ url: cookieUrl, name: c.name });
 		});
 	await Promise.all(removePromises);

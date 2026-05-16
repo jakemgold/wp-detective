@@ -104,7 +104,9 @@ body {
 }
 
 .wpd-header__title {
-	display: block;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	font-family: var(--wpds-typography-font-family-body, -apple-system, system-ui, sans-serif);
 	font-size: 19px;
 	font-weight: 600;
@@ -112,6 +114,18 @@ body {
 	letter-spacing: -0.015em;
 	color: var(--wpd-ink);
 	margin: 0;
+}
+
+.wpd-header__site-icon {
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	border-radius: 3px;
+	object-fit: cover;
+}
+
+.wpd-header__hostname {
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;

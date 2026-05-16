@@ -327,6 +327,233 @@ async function main() {
     assert(none === null, 'returns null on !ok response');
   }
 
+  // --- 15. Nonce extraction from inline scripts and data-* attrs --------
+  {
+    console.log('\n[15] findNonceInDocument — inline wpApiSettings + data-* fallbacks');
+
+    // Pattern 1: WP's standard inline wpApiSettings object.
+    const dom1 = new JSDOM(`
+      <html><head>
+        <script>var wpApiSettings = {"root":"https:\\/\\/example.com\\/wp-json\\/","nonce":"abc123def","versionString":"wp\\/v2\\/"};</script>
+      </head><body></body></html>
+    `);
+    const ctx1 = loadModules(dom1);
+    assert(ctx1.WPRest.findNonceInDocument(ctx1.document) === 'abc123def',
+      'extracts nonce from wpApiSettings inline script');
+
+    // Pattern 2: _wpApiSettings alias (some setups).
+    const dom2 = new JSDOM(`
+      <html><head>
+        <script>var _wpApiSettings = {"nonce":"deadbeef","root":"x"};</script>
+      </head><body></body></html>
+    `);
+    const ctx2 = loadModules(dom2);
+    assert(ctx2.WPRest.findNonceInDocument(ctx2.document) === 'deadbeef',
+      'extracts nonce from _wpApiSettings');
+
+    // Pattern 3: createNonceMiddleware call (older API config style).
+    const dom3 = new JSDOM(`
+      <html><head>
+        <script>wp.api.fetch.use( wp.api.fetch.createNonceMiddleware( "feedface" ) );</script>
+      </head><body></body></html>
+    `);
+    const ctx3 = loadModules(dom3);
+    assert(ctx3.WPRest.findNonceInDocument(ctx3.document) === 'feedface',
+      'extracts nonce from createNonceMiddleware');
+
+    // Pattern 4: data-rest-nonce attribute.
+    const dom4 = new JSDOM(`<html><body data-rest-nonce="cafebabe"></body></html>`);
+    const ctx4 = loadModules(dom4);
+    assert(ctx4.WPRest.findNonceInDocument(ctx4.document) === 'cafebabe',
+      'extracts nonce from data-rest-nonce');
+
+    // No nonce anywhere → null.
+    const dom5 = new JSDOM(`<html><body><script>console.log('hi');</script></body></html>`);
+    const ctx5 = loadModules(dom5);
+    assert(ctx5.WPRest.findNonceInDocument(ctx5.document) === null,
+      'returns null when nothing matches');
+  }
+
+  // --- 16. fetchRawContent sends X-WP-Nonce when given a nonce ----------
+  {
+    console.log('\n[16] fetchRawContent — X-WP-Nonce wiring');
+    const dom = new JSDOM(`<html><body></body></html>`);
+    const ctx = loadModules(dom);
+
+    let capturedHeaders = null;
+    const mockFetch = async (url, options) => {
+      capturedHeaders = options && options.headers;
+      return { ok: true, async json() { return { content: { raw: '<!-- wp:paragraph --><p>hi</p><!-- /wp:paragraph -->' } }; } };
+    };
+
+    const raw = await ctx.WPRest.fetchRawContent({
+      restApiRoot: 'https://example.com/wp-json/',
+      origin: 'https://example.com',
+      postType: 'post',
+      postId: 42,
+      nonce: 'beefdead',
+      fetchImpl: mockFetch,
+    });
+    assert(typeof raw === 'string' && raw.includes('wp:paragraph'), 'raw content returned');
+    assert(capturedHeaders && capturedHeaders['X-WP-Nonce'] === 'beefdead',
+      'X-WP-Nonce header set from nonce option');
+
+    // Without a nonce, the header is omitted (caller's choice — silent
+    // 401 will follow, but the helper itself is honest about not
+    // fabricating auth).
+    capturedHeaders = null;
+    await ctx.WPRest.fetchRawContent({
+      restApiRoot: 'https://example.com/wp-json/',
+      origin: 'https://example.com',
+      postType: 'post',
+      postId: 42,
+      fetchImpl: mockFetch,
+    });
+    assert(capturedHeaders === undefined, 'no headers object when nonce omitted');
+  }
+
+  // --- 17. +New same-origin guard ---------------------------------------
+  {
+    console.log('\n[17] +New menu filters off-origin + non-/wp-admin/ hrefs');
+    const dom = new JSDOM(`
+      <html><head>
+        <link rel="https://api.w.org/" href="https://example.com/wp-json/">
+      </head><body class="logged-in admin-bar">
+        <div id="wpadminbar">
+          <li id="wp-admin-bar-new-content"><ul class="ab-submenu">
+            <li id="wp-admin-bar-new-post"><a href="https://example.com/wp-admin/post-new.php">Post</a></li>
+            <li id="wp-admin-bar-new-page"><a href="https://example.com/wp-admin/post-new.php?post_type=page">Page</a></li>
+            <li id="wp-admin-bar-new-evil"><a href="https://attacker.example/steal">Evil</a></li>
+            <li id="wp-admin-bar-new-offpath"><a href="https://example.com/not-wp-admin/wat.php">Off-path</a></li>
+          </ul></li>
+        </div>
+      </body></html>
+    `, { url: 'https://example.com/some-page/' });
+    const ctx = loadModules(dom);
+    const det = ctx.WPDetect.detectWordPress(ctx.document);
+    const items = det.context.newContentItems;
+    assert(items.length === 2,
+      `2 items survive the filter (got ${items.length}: ${items.map(i => i.id).join(', ')})`);
+    assert(items.every((i) => i.href.startsWith('https://example.com/wp-admin/')),
+      'all surviving hrefs are same-origin /wp-admin/');
+    assert(!items.some((i) => i.id === 'evil'), 'cross-origin attacker entry dropped');
+    assert(!items.some((i) => i.id === 'offpath'), 'same-origin but non-/wp-admin/ entry dropped');
+
+    // Explicit origin override (used when doc came from DOMParser).
+    const dom2 = new JSDOM(`
+      <html><body class="logged-in admin-bar">
+        <div id="wpadminbar">
+          <li id="wp-admin-bar-new-content"><ul class="ab-submenu">
+            <li id="wp-admin-bar-new-post"><a href="https://wp.example/wp-admin/post-new.php">Post</a></li>
+          </ul></li>
+        </div>
+      </body></html>
+    `);
+    const ctx2 = loadModules(dom2);
+    const det2 = ctx2.WPDetect.detectWordPress(ctx2.document, { origin: 'https://wp.example' });
+    assert(det2.context.newContentItems.length === 1,
+      'explicit options.origin lets DOMParser-style docs validate hrefs');
+  }
+
+  // --- 18. isSameOriginAdminUrl helper ----------------------------------
+  {
+    console.log('\n[18] isSameOriginAdminUrl helper');
+    const dom = new JSDOM(`<html><body></body></html>`);
+    const ctx = loadModules(dom);
+    const fn = ctx.WPRest.isSameOriginAdminUrl;
+    assert(fn('https://example.com/wp-admin/post-new.php', 'https://example.com') === true,
+      'same-origin /wp-admin/ URL accepted');
+    assert(fn('https://attacker.example/wp-admin/post-new.php', 'https://example.com') === false,
+      'cross-origin rejected');
+    assert(fn('https://example.com/random-page', 'https://example.com') === false,
+      'same-origin non-/wp-admin/ rejected');
+    assert(fn('not a url', 'https://example.com') === false, 'malformed URL rejected');
+    assert(fn(null, 'https://example.com') === false, 'null href rejected');
+    assert(fn('https://example.com/wp-admin/x', null) === false, 'null origin rejected');
+  }
+
+  // --- 19. Site icon detection from <link> tags -------------------------
+  {
+    console.log('\n[19] Site icon — priority across <link> tag selectors');
+
+    // 192×192 is preferred when present.
+    const dom1 = new JSDOM(`
+      <html><head>
+        <link rel="https://api.w.org/" href="https://example.com/wp-json/">
+        <link rel="icon" sizes="192x192" href="https://example.com/icon-192.png">
+        <link rel="apple-touch-icon" href="https://example.com/icon-apple.png">
+        <link rel="icon" sizes="32x32" href="https://example.com/icon-32.png">
+      </head><body></body></html>
+    `);
+    const ctx1 = loadModules(dom1);
+    const det1 = ctx1.WPDetect.detectWordPress(ctx1.document);
+    assert(det1.context.siteIconUrl === 'https://example.com/icon-192.png',
+      '192x192 wins when all three are present');
+
+    // Falls back to apple-touch-icon.
+    const dom2 = new JSDOM(`
+      <html><head>
+        <link rel="apple-touch-icon" href="https://example.com/icon-apple.png">
+        <link rel="icon" sizes="32x32" href="https://example.com/icon-32.png">
+      </head><body></body></html>
+    `);
+    const ctx2 = loadModules(dom2);
+    const det2 = ctx2.WPDetect.detectWordPress(ctx2.document);
+    assert(det2.context.siteIconUrl === 'https://example.com/icon-apple.png',
+      'apple-touch-icon used when 192x192 absent');
+
+    // Falls back to 32x32.
+    const dom3 = new JSDOM(`
+      <html><head>
+        <link rel="icon" sizes="32x32" href="https://example.com/icon-32.png">
+      </head><body></body></html>
+    `);
+    const ctx3 = loadModules(dom3);
+    const det3 = ctx3.WPDetect.detectWordPress(ctx3.document);
+    assert(det3.context.siteIconUrl === 'https://example.com/icon-32.png',
+      '32x32 used as last resort');
+
+    // Bare <link rel="icon"> without sizes is intentionally ignored —
+    // that's where generic theme favicons live.
+    const dom4 = new JSDOM(`
+      <html><head>
+        <link rel="icon" href="https://example.com/favicon.ico">
+      </head><body></body></html>
+    `);
+    const ctx4 = loadModules(dom4);
+    const det4 = ctx4.WPDetect.detectWordPress(ctx4.document);
+    assert(det4.context.siteIconUrl === null,
+      'bare <link rel="icon"> (no sizes) skipped to avoid generic favicons');
+
+    // No icon links at all → null.
+    const dom5 = new JSDOM(`<html><head></head><body></body></html>`);
+    const ctx5 = loadModules(dom5);
+    const det5 = ctx5.WPDetect.detectWordPress(ctx5.document);
+    assert(det5.context.siteIconUrl === null, 'null when no icon links present');
+
+    // Scheme allowlist — javascript: rejected even though browsers
+    // already block <img src="javascript:...">. Belt-and-suspenders.
+    const dom6 = new JSDOM(`
+      <html><head>
+        <link rel="icon" sizes="192x192" href="javascript:alert(1)">
+      </head><body></body></html>
+    `);
+    const ctx6 = loadModules(dom6);
+    const det6 = ctx6.WPDetect.detectWordPress(ctx6.document);
+    assert(det6.context.siteIconUrl === null, 'javascript: scheme rejected');
+
+    // data: URIs (legit for inline SVG/PNG icons) accepted.
+    const dom7 = new JSDOM(`
+      <html><head>
+        <link rel="icon" sizes="192x192" href="data:image/png;base64,iVBORw0KGgo=">
+      </head><body></body></html>
+    `);
+    const ctx7 = loadModules(dom7);
+    const det7 = ctx7.WPDetect.detectWordPress(ctx7.document);
+    assert(det7.context.siteIconUrl?.startsWith('data:image/png'),
+      'data: scheme accepted');
+  }
+
   // --- 12. Not a WordPress site -----------------------------------------
   {
     console.log('\n[12] Non-WordPress page');

@@ -11,6 +11,7 @@ export function Header({
 	origin = null,
 	updateCount = null,
 	commentCount = null,
+	siteIconUrl = null,
 	onOpen,
 }) {
 	const hasStatus = (updateCount && updateCount > 0) || (commentCount && commentCount > 0);
@@ -18,7 +19,17 @@ export function Header({
 	return (
 		<header className="wpd-header">
 			<h1 className="wpd-header__title" title={hostname}>
-				{hostname}
+				{siteIconUrl && (
+					<img
+						className="wpd-header__site-icon"
+						src={siteIconUrl}
+						alt=""
+						loading="lazy"
+						referrerPolicy="no-referrer"
+						onError={(e) => { e.currentTarget.style.display = 'none'; }}
+					/>
+				)}
+				<span className="wpd-header__hostname">{hostname}</span>
 			</h1>
 			{showMeta && (
 				<div className="wpd-header__meta">

@@ -14,7 +14,7 @@
 
   // -- Detection + reporting -----------------------------------------------
 
-  const detection = globalThis.WPDetect.detectWordPress(document);
+  const detection = globalThis.WPDetect.detectWordPress(document, { origin: location.origin });
   if (!detection.context.isLoggedIn) {
     detection.context.isLoggedIn =
       globalThis.WPDetect.detectLoggedInFromCookies(document.cookie);
@@ -66,15 +66,15 @@
       `;
       document.documentElement.appendChild(hideStyle);
     }
-    // Remove the classes WP uses to style the page as "logged-in" —
-    // track what we removed so we can restore cleanly.
-    if (document.body) {
-      ['logged-in', 'admin-bar'].forEach((cls) => {
-        if (document.body.classList.contains(cls)) {
-          document.body.classList.remove(cls);
-          if (!removedClasses.includes(cls)) removedClasses.push(cls);
-        }
-      });
+    // Remove `body.admin-bar` so themes that key layout off it (e.g.
+    // `body.admin-bar .header { padding-top: 32px }`) collapse cleanly
+    // alongside the html-margin neutralization above. We deliberately
+    // do NOT remove `body.logged-in` — themes use that class for
+    // member-only UI (account links, "Welcome, {user}", hide-login-form,
+    // etc.), and hiding the admin bar shouldn't simulate a logout.
+    if (document.body && document.body.classList.contains('admin-bar')) {
+      document.body.classList.remove('admin-bar');
+      if (!removedClasses.includes('admin-bar')) removedClasses.push('admin-bar');
     }
   }
 
@@ -148,7 +148,7 @@
       // Re-run detection on demand. The IIFE-scope `detection` captured at
       // document_idle goes stale when the user logs in elsewhere and returns
       // to a BFCache'd or page-cached version of this URL.
-      const fresh = globalThis.WPDetect.detectWordPress(document);
+      const fresh = globalThis.WPDetect.detectWordPress(document, { origin: location.origin });
       if (!fresh.context.isLoggedIn) {
         fresh.context.isLoggedIn =
           globalThis.WPDetect.detectLoggedInFromCookies(document.cookie);
@@ -179,7 +179,9 @@
           if (!res.ok) return sendResponse({ detection: null });
           const html = await res.text();
           const doc = new DOMParser().parseFromString(html, 'text/html');
-          const det = globalThis.WPDetect.detectWordPress(doc);
+          // Parsed via DOMParser → no defaultView. Pass the live origin
+          // explicitly so the +New same-origin filter can validate hrefs.
+          const det = globalThis.WPDetect.detectWordPress(doc, { origin: location.origin });
           if (!det.context.isLoggedIn) {
             det.context.isLoggedIn =
               globalThis.WPDetect.detectLoggedInFromCookies(document.cookie);

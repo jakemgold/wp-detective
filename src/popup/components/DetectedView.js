@@ -47,6 +47,7 @@ export function DetectedView({ result, host }) {
 				origin={origin}
 				updateCount={ctx.updateCount || null}
 				commentCount={ctx.commentCount || null}
+				siteIconUrl={ctx.siteIconUrl || null}
 				onOpen={openInNewTab}
 			/>
 			<Section>
@@ -180,14 +181,15 @@ function AdminBarSection({ ctx, origin, prefs, onToggle }) {
 	if (ctx.hasAdminBar) {
 		return <ToggleRow icon={seen} label="Show Admin Bar" checked={!prefs.adminBarHidden} onChange={onToggle} />;
 	}
-	// Logged-in but no admin bar — could be profile pref, a theme calling
-	// show_admin_bar(false), or stale page-cached HTML. "Appears" hedges
-	// honestly across all cases without claiming a definite cause.
+	// Logged-in but no admin bar — could be a profile preference, a theme
+	// filter (show_admin_bar(false) or unhooking wp_admin_bar_render), or
+	// stale page-cached HTML. The user-visible copy names the two common
+	// causes; "appears" hedges honestly across all cases.
 	return (
 		<>
 			<ToggleRow icon={seen} label="Show Admin Bar" checked={false} disabled />
 			<div className="wpd-toggle-hint">
-				Admin bar appears to be disabled, which limits this extension.{' '}
+				Admin bar appears to be disabled by your profile or theme, which limits this extension.{' '}
 				<button
 					type="button"
 					className="wpd-info-row__link"

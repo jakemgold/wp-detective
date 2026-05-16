@@ -24,8 +24,15 @@
    *     signals: string[],          // which checks matched
    *     context: { ... }            // page-level info for the popup
    *   }
+   *
+   * `options.origin` (optional) is the document's real origin, used to
+   * validate that admin-bar URLs we extract (in particular the "+ New"
+   * menu hrefs) point at the same site. Required when `doc` was produced
+   * by DOMParser (no defaultView) and we still want to trust its links.
+   * When omitted we fall back to `doc.defaultView.location.origin`.
    */
-  function detectWordPress(doc) {
+  function detectWordPress(doc, options) {
+    options = options || {};
     const result = {
       isWordPress: false,
       confidence: 0,
@@ -65,8 +72,34 @@
         // enriches these with names/versions via REST when it can.
         themeSlug: null,
         pluginSlugs: [],
+        // URL of the WP "Site Icon" (Customize → Site Identity), captured
+        // from the high-resolution <link> tags WP emits. Null when no
+        // icon is configured — generic theme favicons are intentionally
+        // not picked up so the popup header stays meaningful.
+        siteIconUrl: null,
       },
     };
+
+    // Site icon — three selectors in descending preference. WP emits the
+    // 192×192 link when a Site Icon is set; apple-touch-icon and the 32×32
+    // link are weaker but still WP-Site-Icon-typical signals. We skip the
+    // bare `<link rel="icon">` (no sizes) because that's where generic
+    // theme favicons live.
+    //
+    // Scheme allowlist: only http/https/data. Browsers already block
+    // `javascript:` in <img src>, but capturing one into a popup-rendered
+    // URL is the kind of defense-in-depth that costs nothing here.
+    const iconLink = doc.querySelector('link[rel="icon"][sizes="192x192"]')
+      || doc.querySelector('link[rel="apple-touch-icon"]')
+      || doc.querySelector('link[rel="icon"][sizes="32x32"]');
+    if (iconLink && iconLink.getAttribute('href')) {
+      try {
+        const p = new URL(iconLink.href).protocol;
+        if (p === 'http:' || p === 'https:' || p === 'data:') {
+          result.context.siteIconUrl = iconLink.href;
+        }
+      } catch (_) { /* malformed href, skip */ }
+    }
 
     // --- Strong signal: REST API discovery link (very hard to hide) ---
     const apiLink = doc.querySelector('link[rel="https://api.w.org/"]');
@@ -134,13 +167,27 @@
       // "+ New" menu items. Each sub-item is a distinct content type the
       // current user can create — extract href + label so the popup can
       // mirror the admin bar menu without hard-coding which types exist.
+      //
+      // Same-origin + /wp-admin/ guard: a malicious page can fake an admin
+      // bar with off-origin hrefs that the popup would then carry into a
+      // chrome.tabs navigation. We trust only links pointing at the
+      // document's own origin under /wp-admin/.
+      const docOrigin = options.origin
+        || (doc.defaultView && doc.defaultView.location && doc.defaultView.location.origin)
+        || null;
       const newItems = adminBar.querySelectorAll('#wp-admin-bar-new-content .ab-submenu > li[id] > a[href]');
       result.context.newContentItems = Array.from(newItems)
         .map((a) => {
           const li = a.closest('li[id]');
           const id = li ? li.id.replace(/^wp-admin-bar-new-/, '') : '';
           const label = (a.textContent || '').trim();
-          return id && label ? { id, label, href: a.href } : null;
+          if (!id || !label || !docOrigin) return null;
+          try {
+            const u = new URL(a.href);
+            if (u.origin !== docOrigin) return null;
+            if (!/^\/wp-admin\//.test(u.pathname)) return null;
+          } catch (_) { return null; }
+          return { id, label, href: a.href };
         })
         .filter(Boolean);
     }

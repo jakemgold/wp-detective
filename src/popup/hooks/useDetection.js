@@ -67,10 +67,44 @@ export function useDetection() {
 				try {
 					const [out] = await chrome.scripting.executeScript({
 						target: { tabId: tab.id },
-						func: () => {
+						func: async () => {
+							// Race guard: popups opened before DOMContentLoaded see a
+							// half-parsed <body>, and WordPress prints the admin bar
+							// via wp_footer near the *end* of <body>. body.logged-in
+							// is set on the body tag itself (parsed first), so we can
+							// observe "logged in but no admin bar" purely because the
+							// admin bar markup hasn't streamed in yet. Wait for the
+							// body to finish parsing before probing. Cap the wait so
+							// a stalled page doesn't hang the popup.
+							if (document.readyState === 'loading') {
+								await new Promise((resolve) => {
+									const t = setTimeout(resolve, 1500);
+									document.addEventListener('DOMContentLoaded', () => {
+										clearTimeout(t);
+										resolve();
+									}, { once: true });
+								});
+							}
 							const ab = document.getElementById('wpadminbar');
 							const body = document.body;
 							const bodyLoggedIn = body?.classList?.contains('logged-in') || false;
+							// Site icon — same priority order and same scheme allowlist
+							// as detect.js. Captured here too so the popup still has
+							// it when the content script is unavailable (extension
+							// reload race).
+							const iconLink =
+								document.querySelector('link[rel="icon"][sizes="192x192"]')
+								|| document.querySelector('link[rel="apple-touch-icon"]')
+								|| document.querySelector('link[rel="icon"][sizes="32x32"]');
+							let siteIconUrl = null;
+							if (iconLink && iconLink.getAttribute('href')) {
+								try {
+									const p = new URL(iconLink.href).protocol;
+									if (p === 'http:' || p === 'https:' || p === 'data:') {
+										siteIconUrl = iconLink.href;
+									}
+								} catch (_) { /* malformed href, skip */ }
+							}
 							const qmPanel = document.getElementById('query-monitor-main');
 							// QM has two visible states: `qm-show` (full panel) and
 							// `qm-peek` (mini bar at bottom). Either counts as "open."
@@ -83,17 +117,27 @@ export function useDetection() {
 								bodyLoggedIn,
 								hasQueryMonitor: !!qmPanel,
 								qmOpen,
+								siteIconUrl,
 							};
 							const edit    = ab.querySelector('#wp-admin-bar-edit a[href]');
 							const view    = ab.querySelector('#wp-admin-bar-view a[href]');
 							const preview = ab.querySelector('#wp-admin-bar-preview a[href]');
 							const logout  = ab.querySelector('#wp-admin-bar-logout a[href]');
 							const newLinks = ab.querySelectorAll('#wp-admin-bar-new-content .ab-submenu > li[id] > a[href]');
+							// Same-origin + /wp-admin/ guard: hrefs come from page DOM
+							// and a malicious page could fake the admin bar with
+							// off-origin links the popup would then navigate to.
 							const newContentItems = Array.from(newLinks).map((a) => {
 								const li = a.closest('li[id]');
 								const id = li ? li.id.replace(/^wp-admin-bar-new-/, '') : '';
 								const label = (a.textContent || '').trim();
-								return id && label ? { id, label, href: a.href } : null;
+								if (!id || !label) return null;
+								try {
+									const u = new URL(a.href);
+									if (u.origin !== location.origin) return null;
+									if (!/^\/wp-admin\//.test(u.pathname)) return null;
+								} catch (_) { return null; }
+								return { id, label, href: a.href };
 							}).filter(Boolean);
 							return {
 								hasAdminBar: true,
@@ -105,6 +149,7 @@ export function useDetection() {
 								newContentItems,
 								hasQueryMonitor: !!qmPanel || !!ab.querySelector('#wp-admin-bar-query-monitor'),
 								qmOpen,
+								siteIconUrl,
 							};
 						},
 					});
@@ -116,6 +161,7 @@ export function useDetection() {
 						// Distinct from `isLoggedIn`, which can be true via the
 						// cookie API even when the page DOM is logged-out HTML.
 						lc.bodyLoggedIn = !!live.bodyLoggedIn;
+						if (live.siteIconUrl) lc.siteIconUrl = live.siteIconUrl;
 						if (live.hasAdminBar) {
 							lc.hasAdminBar = true;
 							lc.isLoggedIn = true;
